@@ -208,6 +208,21 @@
   width: fit-content;
 }
 
+.round-pill {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  border: 1px solid rgba(125, 211, 252, 0.4);
+  border-radius: 999px;
+  background: rgba(125, 211, 252, 0.12);
+  padding: 0 12px;
+  color: #dff7ff;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 0.82rem;
+  font-weight: 900;
+  width: fit-content;
+}
+
 .scenery-picker {
   display: grid;
   gap: 10px;
@@ -324,6 +339,48 @@
   gap: 10px;
 }
 
+.match-scoreboard {
+  display: grid;
+  gap: 12px;
+}
+
+.match-scoreboard__rows {
+  display: grid;
+  gap: 10px;
+}
+
+.score-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  border-radius: 8px;
+  background: rgba(8, 15, 42, 0.34);
+  padding: 9px;
+}
+
+.score-row div {
+  min-width: 0;
+}
+
+.score-row strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #f8fbff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-row span {
+  display: block;
+  color: rgba(191, 219, 254, 0.68);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .player-card {
   min-width: 0;
   border: 1px solid rgba(125, 211, 252, 0.18);
@@ -414,6 +471,24 @@
     0 0 32px rgba(253, 230, 138, 0.42);
 }
 
+.round-banner {
+  display: flex;
+  justify-content: center;
+}
+
+.round-banner span {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  border: 1px solid rgba(253, 230, 138, 0.34);
+  border-radius: 999px;
+  background: rgba(253, 230, 138, 0.12);
+  padding: 0 14px;
+  color: #fef3c7;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-weight: 900;
+}
+
 .typing-prompt {
   border: 1px solid rgba(125, 211, 252, 0.24);
   border-radius: 8px;
@@ -497,6 +572,12 @@
   padding-bottom: 10px;
 }
 
+.result-row--wide {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 72px 72px 82px;
+  align-items: center;
+}
+
 .result-row:last-child {
   border-bottom: 0;
   padding-bottom: 0;
@@ -510,6 +591,19 @@
 .result-row strong {
   display: block;
   color: #f8fbff;
+}
+
+.round-history {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid rgba(125, 211, 252, 0.16);
+  padding-top: 12px;
+}
+
+.round-history p {
+  margin: 0;
+  color: rgba(219, 234, 254, 0.76);
+  font-size: 0.85rem;
 }
 
 @media (max-width: 860px) {
@@ -541,6 +635,14 @@
 
   .copy-row {
     display: grid;
+  }
+
+  .result-row--wide {
+    grid-template-columns: 1fr 64px;
+  }
+
+  .result-row--wide div:first-child {
+    grid-column: 1 / -1;
   }
 }
 

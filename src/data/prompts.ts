@@ -7,4 +7,9 @@ export const prompts = [
   'The moonlit arcade glows as friends race across the letter bridge.',
   'Fresh coffee, cozy lights, and steady typing make a perfect practice run.',
   'A good race starts with patience and ends with a happy victory dance.',
+  'Neon windows blink gently while brave racers tap through the night.',
+  'Tiny street lamps guide each player toward the glowing finish line.',
+  'A quiet city hums below as every word becomes another step forward.',
+  'Cozy teammates cheer when careful typing beats rushing and guessing.',
+  'Starry parks, soft clouds, and steady hands make the race feel magical.',
 ];

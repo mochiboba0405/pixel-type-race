@@ -4,11 +4,13 @@ import { ProfileSetup } from '../components/profile/ProfileSetup';
 import { HostControls } from '../components/room/HostControls';
 import { PlayerList } from '../components/room/PlayerList';
 import { RoomInvite } from '../components/room/RoomInvite';
+import { MatchResultsScreen } from '../components/race/MatchResultsScreen';
+import { MatchScoreboard } from '../components/race/MatchScoreboard';
 import { RaceTrack } from '../components/race/RaceTrack';
+import { RoundResultsScreen } from '../components/race/RoundResultsScreen';
 import { StatsBar } from '../components/race/StatsBar';
 import { TypingInput } from '../components/race/TypingInput';
 import { TypingPrompt } from '../components/race/TypingPrompt';
-import { WinnerScreen } from '../components/race/WinnerScreen';
 import { SceneryPicker } from '../components/scenery/SceneryPicker';
 import { getRandomSceneryId, getSceneryTheme } from '../data/sceneryThemes';
 import { useLocalProfile } from '../features/profile/useLocalProfile';
@@ -27,7 +29,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
   const [typed, setTyped] = useState('');
   const [clock, setClock] = useState(0);
   const lastRoundRef = useRef<string | null>(null);
-  const recordedRoundRef = useRef<string | null>(null);
+  const recordedMatchRef = useRef<string | null>(null);
   const initialSceneryId = useMemo(() => loadRoomScenery(roomId), [roomId]);
 
   const race = useRaceRoom({
@@ -67,28 +69,42 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
   const me = race.players.find((player) => player.playerId === profile.id);
 
   useEffect(() => {
-    if (!race.roundId || race.phase !== 'finished' || !race.winner || recordedRoundRef.current === race.roundId) {
+    if (!race.matchId || race.phase !== 'match-results' || !race.matchWinner || recordedMatchRef.current === race.matchId) {
       return;
     }
 
-    recordedRoundRef.current = race.roundId;
+    recordedMatchRef.current = race.matchId;
+
+    const myScore = race.matchScores.find((score) => score.playerId === profile.id);
 
     recordRace({
-      won: race.winner.playerId === profile.id,
-      wpm: me?.wpm ?? metrics.wpm,
-      accuracy: me?.accuracy ?? metrics.accuracy,
+      won: race.matchWinner.playerId === profile.id,
+      wpm: myScore?.averageWpm ?? me?.wpm ?? metrics.wpm,
+      accuracy: myScore?.averageAccuracy ?? me?.accuracy ?? metrics.accuracy,
     });
-  }, [me?.accuracy, me?.wpm, metrics.accuracy, metrics.wpm, profile.id, race.phase, race.roundId, race.winner, recordRace]);
+  }, [
+    me?.accuracy,
+    me?.wpm,
+    metrics.accuracy,
+    metrics.wpm,
+    profile.id,
+    race.matchId,
+    race.matchScores,
+    race.matchWinner,
+    race.phase,
+    recordRace,
+  ]);
 
   const countdown = race.startedAt ? Math.max(0, Math.ceil((race.startedAt - Date.now()) / 1000)) : 0;
   const inputDisabled = race.phase !== 'racing';
   const scenery = getSceneryTheme(race.sceneryId);
-  const canEditScenery = host && (race.phase === 'lobby' || race.phase === 'finished');
+  const canEditScenery = host && race.phase === 'lobby';
+  const roundLabel = `Round ${race.currentRound} of ${race.totalRounds}`;
 
   return (
     <PageShell
       eyebrow={`Room ${roomId}`}
-      title={race.phase === 'finished' ? 'Race results' : 'Ready, steady, type'}
+      title={race.phase === 'match-results' ? 'Match results' : 'Ready, steady, type'}
       subtitle="Live progress updates as each player moves across the track."
       sceneryId={race.sceneryId}
     >
@@ -97,6 +113,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
           Home
         </button>
         <div className="room-topbar__pills">
+          {race.phase !== 'lobby' ? <span className="round-pill">{roundLabel}</span> : null}
           <span className="theme-label">Scenery: {scenery.name}</span>
           <span className={`connection-pill connection-pill--${race.connectionStatus}`}>
             {race.connectionStatus === 'demo'
@@ -128,6 +145,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
             )}
           </section>
           <PlayerList players={race.players} />
+          <MatchScoreboard players={race.players} scores={race.matchScores} />
         </aside>
 
         <section className="race-panel">
@@ -138,7 +156,12 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
                 phase={race.phase}
                 playerCount={race.players.length}
                 connectionStatus={race.connectionStatus}
-                onStart={race.startRace}
+                currentRound={race.currentRound}
+                totalRounds={race.totalRounds}
+                onTotalRoundsChange={race.changeTotalRounds}
+                onStartMatch={race.startMatch}
+                onNextRound={race.nextRound}
+                onPlayAgain={race.playAgain}
               />
               <RaceTrack players={race.players} />
             </div>
@@ -146,6 +169,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
 
           {race.phase === 'countdown' ? (
             <div className="countdown-state" aria-live="polite">
+              <p className="round-pill">{roundLabel}</p>
               <p className="section-label">Starting in</p>
               <strong>{countdown}</strong>
             </div>
@@ -153,6 +177,9 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
 
           {race.phase === 'racing' ? (
             <div className="active-race">
+              <div className="round-banner">
+                <span>{roundLabel}</span>
+              </div>
               <RaceTrack players={race.players} />
               <StatsBar metrics={metrics} />
               <TypingPrompt prompt={race.prompt} typed={typed} />
@@ -160,16 +187,43 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
             </div>
           ) : null}
 
-          {race.phase === 'finished' ? (
+          {race.phase === 'round-results' && race.roundResult ? (
             <div className="finished-race">
-              <WinnerScreen winner={race.winner} players={race.players} />
+              <RoundResultsScreen result={race.roundResult} />
               <RaceTrack players={race.players} />
               <HostControls
                 isHost={host}
                 phase={race.phase}
                 playerCount={race.players.length}
                 connectionStatus={race.connectionStatus}
-                onStart={race.startRace}
+                currentRound={race.currentRound}
+                totalRounds={race.totalRounds}
+                onTotalRoundsChange={race.changeTotalRounds}
+                onStartMatch={race.startMatch}
+                onNextRound={race.nextRound}
+                onPlayAgain={race.playAgain}
+              />
+            </div>
+          ) : null}
+
+          {race.phase === 'match-results' ? (
+            <div className="finished-race">
+              <MatchResultsScreen
+                winner={race.matchWinner}
+                scores={race.matchScores}
+                roundResults={race.roundResults}
+              />
+              <HostControls
+                isHost={host}
+                phase={race.phase}
+                playerCount={race.players.length}
+                connectionStatus={race.connectionStatus}
+                currentRound={race.currentRound}
+                totalRounds={race.totalRounds}
+                onTotalRoundsChange={race.changeTotalRounds}
+                onStartMatch={race.startMatch}
+                onNextRound={race.nextRound}
+                onPlayAgain={race.playAgain}
               />
             </div>
           ) : null}

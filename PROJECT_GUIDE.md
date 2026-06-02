@@ -29,7 +29,7 @@ This app is split into small files so each part has one clear job.
 ## Pages
 
 - `src/pages/HomePage.tsx`: The first screen. It shows profile setup, create room, and join room.
-- `src/pages/RoomPage.tsx`: The full room flow. It handles lobby, countdown, active race, and winner results.
+- `src/pages/RoomPage.tsx`: The full room flow. It handles lobby, countdown, active race, round results, match results, local stats, and score display.
 
 ## Layout and scenery
 
@@ -56,7 +56,9 @@ This app is split into small files so each part has one clear job.
 - `src/components/race/TypingPrompt.tsx`: Colors each prompt character as correct, wrong, current, or untouched.
 - `src/components/race/TypingInput.tsx`: The textarea where the player types during a race.
 - `src/components/race/StatsBar.tsx`: Shows live WPM, accuracy, progress, and elapsed time.
-- `src/components/race/WinnerScreen.tsx`: Shows the winner and final player results.
+- `src/components/race/RoundResultsScreen.tsx`: Shows the winner of one round plus every player's WPM, accuracy, and finish time.
+- `src/components/race/MatchResultsScreen.tsx`: Shows the final match winner, match scoreboard, and round history.
+- `src/components/race/MatchScoreboard.tsx`: Shows the current score across rounds while players stay in the room.
 
 ## Feature logic
 
@@ -64,8 +66,8 @@ This app is split into small files so each part has one clear job.
 - `src/features/profile/profileStorage.ts`: Loads and saves profile data in local storage, and gives each tab a session player ID.
 - `src/features/profile/useLocalProfile.ts`: React hook for reading, editing, and updating local profile stats.
 - `src/features/room/roomUtils.ts`: Creates room IDs, remembers which local session is host, stores the local room scenery, and builds room URLs.
-- `src/features/race/raceTypes.ts`: TypeScript shapes for race phases, players, scenery changes, starts, finishes, and metrics.
-- `src/features/race/raceUtils.ts`: Picks random prompts, creates round IDs, and sorts players.
+- `src/features/race/raceTypes.ts`: TypeScript shapes for race phases, players, scenery changes, round counts, round results, match scores, starts, finishes, and metrics.
+- `src/features/race/raceUtils.ts`: Picks unused prompts for each round, creates match and round IDs, sorts players, and calculates match winners.
 - `src/features/race/typingMetrics.ts`: Calculates WPM, accuracy, progress, and time.
 - `src/features/race/useRaceRoom.ts`: The multiplayer hook. It connects to Supabase Realtime, tracks presence, syncs the shared scenery, broadcasts race starts, broadcasts finishes, and has demo mode when Supabase is not configured.
 
@@ -90,6 +92,15 @@ This app is split into small files so each part has one clear job.
 - Creating a room saves that scenery for the host.
 - The host shares the scenery through Supabase Presence and broadcasts changes with `scenery-change`.
 - Joiners read the host's scenery from room presence, so everyone sees the same background.
+
+## Multi-round matches
+
+- The host chooses 1, 3, 5, 7, or 10 rounds before starting.
+- `useRaceRoom` starts each round with a different prompt and broadcasts `race-start`.
+- When the first player finishes a round, `useRaceRoom` creates a round result snapshot and broadcasts `race-finish`.
+- Between rounds, the host sees `Next Round`; non-host players wait.
+- After the final round, match scores are sorted by round wins, then average WPM as the tie breaker.
+- `Play Again` starts a fresh match at round 1 while keeping everyone in the same room.
 
 ## Supabase
 

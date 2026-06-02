@@ -7,9 +7,11 @@ A beginner-friendly realtime multiplayer typing race game built with React, Vite
 - Local player profile with display name, pixel avatar, and stats
 - Room creation with shareable join links
 - Host-only start button
+- Multi-round matches with host-selected round counts
 - Supabase Realtime presence for live player lists
 - Supabase Realtime broadcasts for race starts and winners
 - Live progress, WPM, accuracy, and winner screen
+- Round results, match score, and final match winner
 - Cute pixel-style parallax background layers
 
 ## Run locally

@@ -1,17 +1,58 @@
 import type { ConnectionStatus, RacePhase } from '../../features/race/raceTypes';
+import type { RoundCount } from '../../features/race/raceTypes';
+import { ROUND_COUNT_OPTIONS } from '../../features/race/raceUtils';
 
 type HostControlsProps = {
   isHost: boolean;
   phase: RacePhase;
   playerCount: number;
   connectionStatus: ConnectionStatus;
-  onStart: () => void;
+  currentRound: number;
+  totalRounds: RoundCount;
+  onTotalRoundsChange: (rounds: RoundCount) => void;
+  onStartMatch: () => void;
+  onNextRound: () => void;
+  onPlayAgain: () => void;
 };
 
-export function HostControls({ isHost, phase, playerCount, connectionStatus, onStart }: HostControlsProps) {
-  const canStart = isHost && (phase === 'lobby' || phase === 'finished');
+export function HostControls({
+  isHost,
+  phase,
+  playerCount,
+  connectionStatus,
+  currentRound,
+  totalRounds,
+  onTotalRoundsChange,
+  onStartMatch,
+  onNextRound,
+  onPlayAgain,
+}: HostControlsProps) {
+  const connectionText =
+    connectionStatus === 'demo'
+      ? 'Demo mode is active until Supabase env vars are added.'
+      : `${playerCount} player${playerCount === 1 ? '' : 's'} connected.`;
 
   if (!isHost) {
+    if (phase === 'round-results') {
+      return (
+        <section className="panel host-controls">
+          <p className="section-label">Round complete</p>
+          <h2>Waiting for host</h2>
+          <p className="muted">Waiting for host to start next round.</p>
+        </section>
+      );
+    }
+
+    if (phase === 'match-results') {
+      return (
+        <section className="panel host-controls">
+          <p className="section-label">Match complete</p>
+          <h2>Waiting for host</h2>
+          <p className="muted">Waiting for host to play again.</p>
+        </section>
+      );
+    }
+
     return (
       <section className="panel host-controls">
         <p className="section-label">Status</p>
@@ -24,15 +65,60 @@ export function HostControls({ isHost, phase, playerCount, connectionStatus, onS
   return (
     <section className="panel host-controls">
       <p className="section-label">Host controls</p>
-      <h2>{phase === 'finished' ? 'Race again' : 'Ready room'}</h2>
-      <p className="muted">
-        {connectionStatus === 'demo'
-          ? 'Demo mode is active until Supabase env vars are added.'
-          : `${playerCount} player${playerCount === 1 ? '' : 's'} connected.`}
-      </p>
-      <button className="button button--primary" type="button" onClick={onStart} disabled={!canStart}>
-        Start Race
-      </button>
+
+      {phase === 'lobby' ? (
+        <>
+          <h2>Match setup</h2>
+          <p className="muted">{connectionText}</p>
+          <label className="field">
+            <span>Rounds</span>
+            <select
+              value={totalRounds}
+              onChange={(event) => onTotalRoundsChange(Number(event.target.value) as RoundCount)}
+            >
+              {ROUND_COUNT_OPTIONS.map((rounds) => (
+                <option key={rounds} value={rounds}>
+                  {rounds} round{rounds === 1 ? '' : 's'}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="button button--primary" type="button" onClick={onStartMatch}>
+            Start Match
+          </button>
+        </>
+      ) : null}
+
+      {phase === 'round-results' ? (
+        <>
+          <h2>
+            Round {currentRound} of {totalRounds}
+          </h2>
+          <p className="muted">Start the next round when everyone is ready.</p>
+          <button className="button button--primary" type="button" onClick={onNextRound}>
+            Next Round
+          </button>
+        </>
+      ) : null}
+
+      {phase === 'match-results' ? (
+        <>
+          <h2>Match complete</h2>
+          <p className="muted">Play again keeps everyone in this room.</p>
+          <button className="button button--primary" type="button" onClick={onPlayAgain}>
+            Play Again
+          </button>
+        </>
+      ) : null}
+
+      {phase === 'countdown' || phase === 'racing' ? (
+        <>
+          <h2>
+            Round {currentRound} of {totalRounds}
+          </h2>
+          <p className="muted">Race in progress.</p>
+        </>
+      ) : null}
     </section>
   );
 }
