@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pixel Type Race">
+  <rect width="64" height="64" fill="#7cc7ff"/>
+  <rect x="8" y="36" width="48" height="12" fill="#344054"/>
+  <rect x="12" y="40" width="6" height="4" fill="#f9fafb"/>
+  <rect x="22" y="40" width="6" height="4" fill="#f9fafb"/>
+  <rect x="32" y="40" width="6" height="4" fill="#f9fafb"/>
+  <rect x="42" y="40" width="6" height="4" fill="#f9fafb"/>
+  <rect x="24" y="16" width="16" height="16" fill="#ffcf66"/>
+  <rect x="20" y="20" width="8" height="8" fill="#ffcf66"/>
+  <rect x="36" y="20" width="8" height="8" fill="#ffcf66"/>
+</svg>

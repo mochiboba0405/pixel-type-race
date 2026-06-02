@@ -1,0 +1,582 @@
+.parallax {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 72% 18%, var(--sky-glow), transparent 26%),
+    linear-gradient(var(--sky-top) 0%, var(--sky-mid) 48%, var(--sky-bottom) 100%);
+}
+
+.parallax::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+.parallax__sky,
+.parallax__layer,
+.parallax__ground,
+.parallax__moon,
+.parallax__aurora,
+.parallax__scene,
+.parallax__trees,
+.parallax__street {
+  position: absolute;
+  inset-inline: 0;
+}
+
+.parallax__sky {
+  inset-block-start: 0;
+  height: 58%;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.86) 0 2px, transparent 3px),
+    radial-gradient(circle at 28% 28%, rgba(255, 255, 255, 0.62) 0 1px, transparent 2px),
+    radial-gradient(circle at 48% 14%, rgba(255, 255, 255, 0.78) 0 2px, transparent 3px),
+    radial-gradient(circle at 83% 30%, rgba(255, 255, 255, 0.64) 0 1px, transparent 2px),
+    radial-gradient(circle at 64% 24%, rgba(255, 255, 255, 0.74) 0 2px, transparent 3px);
+  opacity: 0.86;
+}
+
+.parallax__moon {
+  top: 78px;
+  right: 10%;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: var(--moon);
+  box-shadow:
+    0 0 0 8px rgba(255, 255, 255, 0.08),
+    0 0 36px var(--moon);
+}
+
+.parallax__aurora {
+  top: 120px;
+  left: -8%;
+  height: 180px;
+  background:
+    linear-gradient(110deg, transparent 0 24%, rgba(125, 211, 252, 0.16) 34%, transparent 46%),
+    linear-gradient(130deg, transparent 0 36%, rgba(240, 171, 252, 0.14) 48%, transparent 62%);
+  filter: blur(2px);
+  opacity: 0.8;
+}
+
+.parallax__layer {
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  pointer-events: none;
+}
+
+.parallax__layer--sparkles {
+  top: 36px;
+  height: 180px;
+  background-image: url('/pixel/backgrounds/layer-sparkles.svg');
+  opacity: 0.72;
+  animation: drift 34s linear infinite;
+}
+
+.parallax__layer--clouds {
+  top: 108px;
+  height: 150px;
+  background-image: url('/pixel/backgrounds/layer-clouds.svg');
+  opacity: 0.22;
+  animation: drift 54s linear infinite;
+}
+
+.parallax__scene {
+  bottom: 78px;
+  height: 270px;
+}
+
+.scene-building {
+  position: absolute;
+  bottom: 0;
+  border: 2px solid rgba(191, 219, 254, 0.12);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06), transparent 18% 82%, rgba(0, 0, 0, 0.16)),
+    var(--building-a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 28px rgba(0, 0, 0, 0.22);
+}
+
+.scene-building--2 {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07), transparent 20% 80%, rgba(0, 0, 0, 0.16)),
+    var(--building-b);
+}
+
+.scene-building--3 {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 20% 80%, rgba(0, 0, 0, 0.16)),
+    var(--building-c);
+}
+
+.scene-building span {
+  position: absolute;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--window);
+  box-shadow:
+    0 0 10px var(--window),
+    22px 18px 0 rgba(255, 255, 255, 0.24),
+    2px 46px 0 var(--window),
+    26px 76px 0 rgba(255, 255, 255, 0.2);
+}
+
+.scene-building span:nth-child(1) {
+  left: 14px;
+  top: 20px;
+}
+
+.scene-building span:nth-child(2) {
+  left: 38px;
+  top: 44px;
+}
+
+.scene-building span:nth-child(3) {
+  left: 16px;
+  top: 82px;
+}
+
+.scene-building span:nth-child(4) {
+  left: 42px;
+  top: 116px;
+}
+
+.scene-building span:nth-child(5) {
+  left: 18px;
+  bottom: 44px;
+}
+
+.scene-building span:nth-child(6) {
+  right: 14px;
+  bottom: 70px;
+}
+
+.parallax--hills .scene-building,
+.parallax--park .scene-building,
+.parallax--garden .scene-building,
+.parallax--suburb .scene-building {
+  height: 74px !important;
+  border-radius: 28px 28px 0 0;
+  background: linear-gradient(180deg, var(--building-c), var(--ground));
+}
+
+.parallax--cafe .scene-building:nth-child(3n),
+.parallax--alley .scene-building:nth-child(2n) {
+  border-top: 10px solid var(--scene-accent);
+}
+
+.parallax--harbor .parallax__ground {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 18px, transparent 18px 36px),
+    linear-gradient(180deg, var(--road), #071827);
+}
+
+.parallax--rooftop .parallax__aurora {
+  background:
+    repeating-linear-gradient(100deg, transparent 0 28px, rgba(191, 219, 254, 0.14) 28px 30px, transparent 30px 56px);
+}
+
+.parallax__trees {
+  bottom: 68px;
+  height: 140px;
+  pointer-events: none;
+}
+
+.parallax__trees span {
+  position: absolute;
+  bottom: 0;
+  width: 74px;
+  height: 74px;
+  border-radius: 40% 48% 32% 44%;
+  background:
+    radial-gradient(circle at 30% 28%, var(--scene-accent-soft), transparent 0 6px),
+    radial-gradient(circle at 56% 38%, var(--scene-accent), transparent 0 5px),
+    var(--building-c);
+  box-shadow:
+    0 0 22px rgba(125, 211, 252, 0.12),
+    16px 20px 0 -4px var(--building-b);
+}
+
+.parallax__trees span::after {
+  content: "";
+  position: absolute;
+  left: 33px;
+  bottom: -42px;
+  width: 10px;
+  height: 48px;
+  background: #463052;
+}
+
+.parallax__trees span:nth-child(1) {
+  left: 5%;
+}
+
+.parallax__trees span:nth-child(2) {
+  left: 28%;
+  transform: scale(0.78);
+}
+
+.parallax__trees span:nth-child(3) {
+  right: 18%;
+  transform: scale(0.92);
+}
+
+.parallax__trees span:nth-child(4) {
+  right: 4%;
+  transform: scale(0.72);
+}
+
+.parallax__ground {
+  bottom: 0;
+  height: 92px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 28px, transparent 28px 56px),
+    linear-gradient(180deg, var(--road) 0 54%, var(--ground) 54% 100%);
+  border-top: 2px solid rgba(191, 219, 254, 0.22);
+  box-shadow: 0 -20px 40px rgba(0, 0, 0, 0.22);
+}
+
+.parallax__street {
+  bottom: 44px;
+  height: 88px;
+  pointer-events: none;
+}
+
+.street-lamp {
+  position: absolute;
+  bottom: 8px;
+  width: 10px;
+  height: 78px;
+  border-radius: 8px 8px 0 0;
+  background: #111827;
+  box-shadow: 0 0 0 2px rgba(191, 219, 254, 0.16);
+}
+
+.street-lamp::before {
+  content: "";
+  position: absolute;
+  left: -13px;
+  top: -16px;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--moon);
+  box-shadow:
+    0 0 28px var(--moon),
+    0 20px 44px rgba(254, 243, 199, 0.22);
+}
+
+.street-lamp--left {
+  left: 38%;
+}
+
+.street-lamp--right {
+  right: 24%;
+  transform: scale(0.82);
+}
+
+.tiny-human {
+  position: absolute;
+  bottom: 0;
+  width: 28px;
+  height: 44px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.28));
+}
+
+.tiny-human span {
+  position: absolute;
+  display: block;
+}
+
+.tiny-human__hair {
+  left: 7px;
+  top: 0;
+  width: 14px;
+  height: 10px;
+  border-radius: 7px 7px 2px 2px;
+  background: var(--human-hair);
+}
+
+.tiny-human__head {
+  left: 8px;
+  top: 7px;
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  background: #f8c8a8;
+}
+
+.tiny-human__body {
+  left: 6px;
+  top: 20px;
+  width: 16px;
+  height: 15px;
+  border-radius: 5px 5px 2px 2px;
+  background: var(--human-shirt);
+}
+
+.tiny-human__leg {
+  top: 34px;
+  width: 5px;
+  height: 10px;
+  background: #dbeafe;
+}
+
+.tiny-human__leg--left {
+  left: 8px;
+}
+
+.tiny-human__leg--right {
+  right: 8px;
+}
+
+@keyframes drift {
+  from {
+    background-position-x: 0;
+  }
+
+  to {
+    background-position-x: -960px;
+  }
+}
+
+.pixel-avatar {
+  position: relative;
+  display: inline-block;
+  width: 64px;
+  height: 64px;
+  font-size: 64px;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.28));
+}
+
+.pixel-avatar--small {
+  width: 40px;
+  height: 40px;
+  font-size: 40px;
+}
+
+.pixel-avatar--medium {
+  width: 56px;
+  height: 56px;
+  font-size: 56px;
+}
+
+.pixel-avatar--large {
+  width: 84px;
+  height: 84px;
+  font-size: 84px;
+}
+
+.pixel-avatar span {
+  position: absolute;
+  display: block;
+}
+
+.pixel-avatar__hair {
+  inset: 8% 18% 58%;
+  background: var(--hair);
+  box-shadow:
+    -0.08em 0.12em 0 var(--hair),
+    0.08em 0.12em 0 var(--hair);
+}
+
+.pixel-avatar__face {
+  inset: 24% 20% 28%;
+  background: var(--skin);
+  box-shadow:
+    0 0.06em 0 var(--skin),
+    0 0.12em 0 var(--skin);
+}
+
+.pixel-avatar__eye {
+  top: 43%;
+  width: 9%;
+  height: 9%;
+  background: #111827;
+}
+
+.pixel-avatar__eye--left {
+  left: 36%;
+}
+
+.pixel-avatar__eye--right {
+  right: 36%;
+}
+
+.pixel-avatar__smile {
+  left: 43%;
+  top: 58%;
+  width: 14%;
+  height: 7%;
+  background: #8a4b28;
+}
+
+.pixel-avatar__shirt {
+  inset: 70% 14% 4%;
+  background: var(--shirt);
+  box-shadow:
+    -0.06em -0.04em 0 var(--shirt),
+    0.06em -0.04em 0 var(--shirt);
+}
+
+.pixel-avatar__spark {
+  right: 4%;
+  top: 10%;
+  width: 14%;
+  height: 14%;
+  background: var(--accent);
+  box-shadow:
+    0 0.12em 0 var(--accent),
+    -0.12em 0 0 var(--accent),
+    0 0 0.18em var(--accent);
+}
+
+.race-track {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(12, 20, 52, 0.68), rgba(8, 15, 42, 0.5)),
+    rgba(8, 15, 42, 0.62);
+  padding: 14px;
+}
+
+.race-lane {
+  display: grid;
+  grid-template-columns: minmax(76px, 140px) minmax(0, 1fr) 44px;
+  gap: 10px;
+  align-items: center;
+}
+
+.race-lane__name,
+.race-lane__stat {
+  min-width: 0;
+  color: rgba(219, 234, 254, 0.82);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.race-lane__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.race-lane__stat {
+  color: #fef3c7;
+  font-family: "Courier New", ui-monospace, monospace;
+  text-align: right;
+}
+
+.race-lane__road {
+  position: relative;
+  height: 58px;
+  overflow: hidden;
+  border: 1px solid rgba(147, 197, 253, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(191, 219, 254, 0.14) 0 8px, transparent 8px 100%),
+    repeating-linear-gradient(90deg, transparent 0 28px, rgba(253, 230, 138, 0.16) 28px 34px),
+    linear-gradient(180deg, rgba(37, 99, 235, 0.24), rgba(15, 23, 42, 0.66));
+}
+
+.race-lane__road::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 12px;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.16) 0 16px, transparent 16px 32px);
+}
+
+.race-lane__racer {
+  position: absolute;
+  z-index: 2;
+  top: 7px;
+  min-width: 40px;
+  transition: left 180ms ease;
+}
+
+.race-lane__finish {
+  position: absolute;
+  inset-block: 0;
+  right: 10px;
+  width: 12px;
+  background:
+    linear-gradient(45deg, #f8fbff 25%, transparent 25% 75%, #f8fbff 75%),
+    linear-gradient(45deg, #111827 25%, transparent 25% 75%, #111827 75%);
+  background-position:
+    0 0,
+    6px 6px;
+  background-size: 12px 12px;
+  box-shadow: 0 0 12px rgba(248, 251, 255, 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parallax__layer {
+    animation: none;
+  }
+
+  .button,
+  .race-lane__racer {
+    transition: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .scene-building {
+    opacity: 0.82;
+  }
+
+  .street-lamp--left {
+    left: 44%;
+  }
+
+  .street-lamp--right {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .parallax__moon {
+    top: 72px;
+    right: 18px;
+    width: 58px;
+    height: 58px;
+  }
+
+  .parallax__scene {
+    bottom: 112px;
+    transform: scale(0.86);
+    transform-origin: bottom center;
+  }
+
+  .parallax__trees span:nth-child(2),
+  .parallax__trees span:nth-child(3) {
+    display: none;
+  }
+
+  .race-lane {
+    grid-template-columns: 1fr 44px;
+  }
+
+  .race-lane__name {
+    grid-column: 1 / -1;
+  }
+}
