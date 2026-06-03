@@ -3,9 +3,10 @@ import { PixelAvatar } from '../profile/PixelAvatar';
 
 type PlayerListProps = {
   players: PlayerRaceState[];
+  onPlayerProfileClick?: (player: PlayerRaceState) => void;
 };
 
-export function PlayerList({ players }: PlayerListProps) {
+export function PlayerList({ players, onPlayerProfileClick }: PlayerListProps) {
   return (
     <section className="panel player-list">
       <div className="panel__title-row">
@@ -18,7 +19,14 @@ export function PlayerList({ players }: PlayerListProps) {
       <div className="player-list__items">
         {players.map((player) => (
           <article className="player-card" key={player.playerId}>
-            <PixelAvatar avatar={player.avatar} size="small" label={`${player.displayName} avatar`} />
+            <button
+              className="avatar-profile-button"
+              type="button"
+              onClick={() => onPlayerProfileClick?.(player)}
+              title={`View ${player.displayName} profile`}
+            >
+              <PixelAvatar avatar={player.avatar} size="small" label={`${player.displayName} avatar`} />
+            </button>
             <div className="player-card__main">
               <div className="player-card__name">
                 <strong>{player.displayName}</strong>

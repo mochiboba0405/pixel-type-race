@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageShell } from '../components/layout/PageShell';
+import { ProfileModal } from '../components/profile/ProfileModal';
 import { ProfileSetup } from '../components/profile/ProfileSetup';
 import { HostControls } from '../components/room/HostControls';
 import { PlayerList } from '../components/room/PlayerList';
@@ -17,6 +18,7 @@ import { useLocalProfile } from '../features/profile/useLocalProfile';
 import { isRoomHost, loadRoomScenery } from '../features/room/roomUtils';
 import { useRaceRoom } from '../features/race/useRaceRoom';
 import { calculateTypingMetrics } from '../features/race/typingMetrics';
+import type { PlayerRaceState } from '../features/race/raceTypes';
 
 type RoomPageProps = {
   roomId: string;
@@ -28,6 +30,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
   const host = isRoomHost(roomId, profile.id);
   const [typed, setTyped] = useState('');
   const [clock, setClock] = useState(0);
+  const [selectedProfilePlayer, setSelectedProfilePlayer] = useState<PlayerRaceState | null>(null);
   const lastRoundRef = useRef<string | null>(null);
   const recordedMatchRef = useRef<string | null>(null);
   const initialSceneryId = useMemo(() => loadRoomScenery(roomId), [roomId]);
@@ -144,7 +147,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
               <p className="muted">The host controls the shared scenery.</p>
             )}
           </section>
-          <PlayerList players={race.players} />
+          <PlayerList players={race.players} onPlayerProfileClick={setSelectedProfilePlayer} />
           <MatchScoreboard players={race.players} scores={race.matchScores} />
         </aside>
 
@@ -229,6 +232,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
           ) : null}
         </section>
       </div>
+      <ProfileModal player={selectedProfilePlayer} onClose={() => setSelectedProfilePlayer(null)} />
     </PageShell>
   );
 }

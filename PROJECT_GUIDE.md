@@ -39,15 +39,16 @@ This app is split into small files so each part has one clear job.
 
 ## Profile components
 
-- `src/components/profile/ProfileSetup.tsx`: Lets the player edit display name and avatar, and shows local stats.
-- `src/components/profile/AvatarPicker.tsx`: Renders all avatar choices.
-- `src/components/profile/PixelAvatar.tsx`: Draws a pixel avatar with CSS blocks.
+- `src/components/profile/ProfileSetup.tsx`: Lets the player edit username, avatar, favorite scenery, and shows upgraded lifetime stats.
+- `src/components/profile/AvatarPicker.tsx`: Renders categorized Girl, Boy, and Neutral avatar choices with category tabs.
+- `src/components/profile/PixelAvatar.tsx`: Draws a pixel avatar with CSS blocks, including hairstyle and accessory variants.
+- `src/components/profile/ProfileModal.tsx`: Shows another player's public profile when their lobby avatar is clicked.
 
 ## Room components
 
 - `src/components/room/JoinRoomForm.tsx`: Takes a room code and navigates to that room.
 - `src/components/room/RoomInvite.tsx`: Shows the room code and copyable room link.
-- `src/components/room/PlayerList.tsx`: Shows connected players, host badge, progress, and WPM.
+- `src/components/room/PlayerList.tsx`: Shows connected players, host badge, progress, and WPM. Player avatars are clickable to open profiles.
 - `src/components/room/HostControls.tsx`: Shows the host-only start button or waiting status.
 
 ## Race components
@@ -62,29 +63,29 @@ This app is split into small files so each part has one clear job.
 
 ## Feature logic
 
-- `src/features/profile/profileTypes.ts`: TypeScript shapes for avatars, profiles, and local stats.
-- `src/features/profile/profileStorage.ts`: Loads and saves profile data in local storage, and gives each tab a session player ID.
+- `src/features/profile/profileTypes.ts`: TypeScript shapes for avatar categories, hairstyles, accessories, profiles, and local stats.
+- `src/features/profile/profileStorage.ts`: Loads, migrates, and saves profile data in local storage, and gives each tab a session player ID.
 - `src/features/profile/useLocalProfile.ts`: React hook for reading, editing, and updating local profile stats.
 - `src/features/room/roomUtils.ts`: Creates room IDs, remembers which local session is host, stores the local room scenery, and builds room URLs.
-- `src/features/race/raceTypes.ts`: TypeScript shapes for race phases, players, scenery changes, round counts, round results, match scores, starts, finishes, and metrics.
+- `src/features/race/raceTypes.ts`: TypeScript shapes for race phases, players, shared public profile data, scenery changes, round counts, round results, match scores, starts, finishes, and metrics.
 - `src/features/race/raceUtils.ts`: Picks unused prompts for each round, creates match and round IDs, sorts players, and calculates match winners.
 - `src/features/race/typingMetrics.ts`: Calculates WPM, accuracy, progress, and time.
-- `src/features/race/useRaceRoom.ts`: The multiplayer hook. It connects to Supabase Realtime, tracks presence, syncs the shared scenery, broadcasts race starts, broadcasts finishes, and has demo mode when Supabase is not configured.
+- `src/features/race/useRaceRoom.ts`: The multiplayer hook. It connects to Supabase Realtime, tracks presence, shares public profile details, syncs the shared scenery, broadcasts race starts, broadcasts finishes, and has demo mode when Supabase is not configured.
 
 ## Shared libraries and data
 
 - `src/lib/ids.ts`: Makes random player and room IDs.
 - `src/lib/storage.ts`: Small JSON helpers for browser local storage.
 - `src/lib/supabaseClient.ts`: Creates the Supabase client if env vars are present.
-- `src/data/avatarOptions.ts`: The available pixel avatars and their colors.
+- `src/data/avatarOptions.ts`: The available pixel avatars, grouped into Girl, Boy, and Neutral categories with hairstyle/accessory metadata.
 - `src/data/prompts.ts`: Beginner-friendly typing prompts.
 - `src/data/sceneryThemes.ts`: The list of scenery themes. Each theme has a name, mood, scene type, and colors used by the parallax background.
 
 ## Styles
 
 - `src/styles/globals.css`: Browser resets, dark arcade typography, inputs, selects, and headings.
-- `src/styles/theme.css`: Glassy panels, neon buttons, profile UI, room UI, scenery controls, prompt UI, and responsive rules.
-- `src/styles/pixel.css`: Pixel avatar styling, theme-based parallax background styling, tiny humans, street scenery, and race track styling.
+- `src/styles/theme.css`: Glassy panels, neon buttons, profile UI, avatar category tabs, profile modal, room UI, scenery controls, prompt UI, and responsive rules.
+- `src/styles/pixel.css`: Pixel avatar styling, hairstyle/accessory variants, theme-based parallax background styling, tiny humans, street scenery, and race track styling.
 
 ## Shared scenery state
 
@@ -101,6 +102,13 @@ This app is split into small files so each part has one clear job.
 - Between rounds, the host sees `Next Round`; non-host players wait.
 - After the final round, match scores are sorted by round wins, then average WPM as the tie breaker.
 - `Play Again` starts a fresh match at round 1 while keeping everyone in the same room.
+
+## Profile upgrades
+
+- Local profiles now include username, avatar, favorite scenery, lifetime wins, total races, highest WPM, average WPM, average accuracy, and win rate.
+- Avatar choices are grouped as Girl, Boy, and Neutral.
+- Girl and Boy avatars use hairstyle/accessory metadata so CSS can draw different pixel silhouettes.
+- Public profile data is sent through room presence, which lets the profile modal show another player without adding login or database tables.
 
 ## Supabase
 

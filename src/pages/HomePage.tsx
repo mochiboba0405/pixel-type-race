@@ -13,8 +13,16 @@ type HomePageProps = {
 
 export function HomePage({ navigate }: HomePageProps) {
   const { profile, updateProfile } = useLocalProfile();
-  const [selectedSceneryId, setSelectedSceneryId] = useState(() => getRandomSceneryId());
+  const [selectedSceneryId, setSelectedSceneryId] = useState(() => profile.favoriteSceneryId);
   const selectedScenery = getSceneryTheme(selectedSceneryId);
+
+  function updateProfileFromHome(updates: Parameters<typeof updateProfile>[0]) {
+    updateProfile(updates);
+
+    if (updates.favoriteSceneryId) {
+      setSelectedSceneryId(updates.favoriteSceneryId);
+    }
+  }
 
   function createRoom() {
     const roomId = createNewRoomForHost(profile.id, selectedSceneryId);
@@ -29,7 +37,7 @@ export function HomePage({ navigate }: HomePageProps) {
       sceneryId={selectedSceneryId}
     >
       <div className="home-grid">
-        <ProfileSetup profile={profile} onChange={updateProfile} />
+        <ProfileSetup profile={profile} onChange={updateProfileFromHome} />
 
         <section className="panel action-panel">
           <p className="section-label">Play</p>

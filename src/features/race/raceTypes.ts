@@ -1,4 +1,5 @@
 import type { AvatarOption } from '../profile/profileTypes';
+import type { LocalStats } from '../profile/profileTypes';
 
 export type RacePhase = 'lobby' | 'countdown' | 'racing' | 'round-results' | 'match-results';
 
@@ -11,6 +12,8 @@ export type PlayerRaceState = {
   displayName: string;
   avatarId: string;
   avatar: AvatarOption;
+  favoriteSceneryId: string;
+  profileStats: LocalStats;
   isHost: boolean;
   sceneryId: string;
   totalRounds: RoundCount;

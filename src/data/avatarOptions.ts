@@ -1,9 +1,196 @@
-import type { AvatarOption } from '../features/profile/profileTypes';
+import type { AvatarCategory, AvatarOption } from '../features/profile/profileTypes';
+
+export const avatarCategories: AvatarCategory[] = ['Girl', 'Boy', 'Neutral'];
 
 export const avatarOptions: AvatarOption[] = [
   {
+    id: 'girl-red-long',
+    name: 'Red Long',
+    category: 'Girl',
+    hairStyle: 'long',
+    colors: {
+      hair: '#dc2626',
+      skin: '#ffd7a8',
+      shirt: '#fb7185',
+      accent: '#fef3c7',
+    },
+  },
+  {
+    id: 'girl-brown-ponytail',
+    name: 'Brown Ponytail',
+    category: 'Girl',
+    hairStyle: 'ponytail',
+    colors: {
+      hair: '#7c3f1d',
+      skin: '#f8c8a8',
+      shirt: '#c084fc',
+      accent: '#fde68a',
+    },
+  },
+  {
+    id: 'girl-black-twintails',
+    name: 'Black Twin Tails',
+    category: 'Girl',
+    hairStyle: 'twin-tails',
+    colors: {
+      hair: '#111827',
+      skin: '#ffd6c2',
+      shirt: '#60a5fa',
+      accent: '#f0abfc',
+    },
+  },
+  {
+    id: 'girl-blonde-bun',
+    name: 'Blonde Bun',
+    category: 'Girl',
+    hairStyle: 'bun',
+    colors: {
+      hair: '#facc15',
+      skin: '#ffc9a9',
+      shirt: '#34d399',
+      accent: '#fff7ed',
+    },
+  },
+  {
+    id: 'girl-red-short',
+    name: 'Red Short',
+    category: 'Girl',
+    hairStyle: 'short',
+    colors: {
+      hair: '#b91c1c',
+      skin: '#f6bd90',
+      shirt: '#f472b6',
+      accent: '#fecdd3',
+    },
+  },
+  {
+    id: 'girl-brown-long',
+    name: 'Brown Long',
+    category: 'Girl',
+    hairStyle: 'long',
+    colors: {
+      hair: '#8b5a2b',
+      skin: '#f1c27d',
+      shirt: '#7dd3fc',
+      accent: '#fef08a',
+    },
+  },
+  {
+    id: 'girl-black-short',
+    name: 'Black Short',
+    category: 'Girl',
+    hairStyle: 'short',
+    colors: {
+      hair: '#1f2937',
+      skin: '#ffd7b5',
+      shirt: '#a78bfa',
+      accent: '#e0f2fe',
+    },
+  },
+  {
+    id: 'girl-blonde-twintails',
+    name: 'Blonde Twin Tails',
+    category: 'Girl',
+    hairStyle: 'twin-tails',
+    colors: {
+      hair: '#fde047',
+      skin: '#ffd0a6',
+      shirt: '#fb7185',
+      accent: '#fef3c7',
+    },
+  },
+  {
+    id: 'boy-brown-short',
+    name: 'Brown Short',
+    category: 'Boy',
+    hairStyle: 'short',
+    colors: {
+      hair: '#7c3f1d',
+      skin: '#f1c27d',
+      shirt: '#38bdf8',
+      accent: '#dbeafe',
+    },
+  },
+  {
+    id: 'boy-black-messy',
+    name: 'Black Messy',
+    category: 'Boy',
+    hairStyle: 'messy',
+    colors: {
+      hair: '#111827',
+      skin: '#ffd7a8',
+      shirt: '#818cf8',
+      accent: '#c7d2fe',
+    },
+  },
+  {
+    id: 'boy-blonde-hoodie',
+    name: 'Blonde Hoodie',
+    category: 'Boy',
+    hairStyle: 'short',
+    accessory: 'hoodie',
+    colors: {
+      hair: '#facc15',
+      skin: '#ffc9a9',
+      shirt: '#22c55e',
+      accent: '#bbf7d0',
+    },
+  },
+  {
+    id: 'boy-brown-glasses',
+    name: 'Brown Glasses',
+    category: 'Boy',
+    hairStyle: 'short',
+    accessory: 'glasses',
+    colors: {
+      hair: '#8b5a2b',
+      skin: '#ffd6c2',
+      shirt: '#f97316',
+      accent: '#fed7aa',
+    },
+  },
+  {
+    id: 'boy-black-hoodie',
+    name: 'Black Hoodie',
+    category: 'Boy',
+    hairStyle: 'messy',
+    accessory: 'hoodie',
+    colors: {
+      hair: '#1f2937',
+      skin: '#f8c8a8',
+      shirt: '#6366f1',
+      accent: '#bfdbfe',
+    },
+  },
+  {
+    id: 'boy-blonde-short',
+    name: 'Blonde Short',
+    category: 'Boy',
+    hairStyle: 'short',
+    colors: {
+      hair: '#fde047',
+      skin: '#f6bd90',
+      shirt: '#06b6d4',
+      accent: '#cffafe',
+    },
+  },
+  {
+    id: 'boy-brown-messy',
+    name: 'Brown Messy',
+    category: 'Boy',
+    hairStyle: 'messy',
+    colors: {
+      hair: '#92400e',
+      skin: '#f1c27d',
+      shirt: '#84cc16',
+      accent: '#ecfccb',
+    },
+  },
+  {
     id: 'berry',
     name: 'Berry',
+    category: 'Neutral',
+    hairStyle: 'classic',
     colors: {
       hair: '#7c3aed',
       skin: '#ffd7a8',
@@ -14,6 +201,8 @@ export const avatarOptions: AvatarOption[] = [
   {
     id: 'mint',
     name: 'Mint',
+    category: 'Neutral',
+    hairStyle: 'classic',
     colors: {
       hair: '#065f46',
       skin: '#f8c8a8',
@@ -24,6 +213,8 @@ export const avatarOptions: AvatarOption[] = [
   {
     id: 'sunny',
     name: 'Sunny',
+    category: 'Neutral',
+    hairStyle: 'classic',
     colors: {
       hair: '#b45309',
       skin: '#f6bd60',
@@ -34,6 +225,8 @@ export const avatarOptions: AvatarOption[] = [
   {
     id: 'bubble',
     name: 'Bubble',
+    category: 'Neutral',
+    hairStyle: 'classic',
     colors: {
       hair: '#1d4ed8',
       skin: '#ffd6e0',
@@ -44,6 +237,8 @@ export const avatarOptions: AvatarOption[] = [
   {
     id: 'sprout',
     name: 'Sprout',
+    category: 'Neutral',
+    hairStyle: 'classic',
     colors: {
       hair: '#166534',
       skin: '#f1c27d',
@@ -54,6 +249,8 @@ export const avatarOptions: AvatarOption[] = [
   {
     id: 'peach',
     name: 'Peach',
+    category: 'Neutral',
+    hairStyle: 'classic',
     colors: {
       hair: '#be123c',
       skin: '#ffc9a9',

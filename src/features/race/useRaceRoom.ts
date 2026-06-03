@@ -103,15 +103,27 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         totalRounds,
         ...overrides,
         playerId: profile.id,
-        displayName: profile.displayName,
+        displayName: profile.username,
         avatarId: profile.avatarId,
         avatar: profile.avatar,
+        favoriteSceneryId: profile.favoriteSceneryId,
+        profileStats: profile.stats,
         isHost,
         sceneryId,
         lastSeen: Date.now(),
       };
     },
-    [isHost, profile.avatar, profile.avatarId, profile.displayName, profile.id, sceneryId, totalRounds],
+    [
+      isHost,
+      profile.avatar,
+      profile.avatarId,
+      profile.favoriteSceneryId,
+      profile.id,
+      profile.stats,
+      profile.username,
+      sceneryId,
+      totalRounds,
+    ],
   );
 
   const updateMyPresence = useCallback(
@@ -152,10 +164,10 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           const isWinner = player.playerId === roundWinner.playerId;
 
           return {
-            playerId: player.playerId,
-            displayName: player.displayName,
-            avatarId: player.avatarId,
-            avatar: player.avatar,
+        playerId: player.playerId,
+        displayName: player.displayName,
+        avatarId: player.avatarId,
+        avatar: player.avatar,
             wpm: isWinner ? roundWinner.wpm : player.wpm,
             accuracy: isWinner ? roundWinner.accuracy : player.accuracy,
             finished: isWinner || player.finished,
@@ -416,7 +428,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
 
       const roundWinner: RoundWinner = {
         playerId: profile.id,
-        displayName: profile.displayName,
+        displayName: profile.username,
         wpm: metrics.wpm,
         accuracy: metrics.accuracy,
         finishMs: metrics.elapsedMs,
@@ -441,7 +453,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         });
       }
     },
-    [applyRoundResult, createRoundResult, profile.displayName, profile.id, updateMyPresence],
+    [applyRoundResult, createRoundResult, profile.id, profile.username, updateMyPresence],
   );
 
   return {

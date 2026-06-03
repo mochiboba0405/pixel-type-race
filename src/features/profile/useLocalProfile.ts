@@ -6,11 +6,14 @@ import type { PlayerProfile, RaceResultForStats } from './profileTypes';
 export function useLocalProfile() {
   const [profile, setProfile] = useState<PlayerProfile>(() => loadProfile());
 
-  const updateProfile = useCallback((updates: Partial<Pick<PlayerProfile, 'displayName' | 'avatarId'>>) => {
+  const updateProfile = useCallback((updates: Partial<Pick<PlayerProfile, 'username' | 'displayName' | 'avatarId' | 'favoriteSceneryId'>>) => {
     setProfile((current) => {
+      const username = updates.username ?? updates.displayName ?? current.username;
       const next = {
         ...current,
         ...updates,
+        username,
+        displayName: username,
         avatar: getAvatarById(updates.avatarId ?? current.avatarId),
       };
 

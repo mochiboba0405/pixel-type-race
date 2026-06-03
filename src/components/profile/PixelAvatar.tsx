@@ -3,7 +3,7 @@ import type { AvatarOption } from '../../features/profile/profileTypes';
 
 type PixelAvatarProps = {
   avatar: AvatarOption;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'small' | 'medium' | 'large' | 'hero';
   label?: string;
 };
 
@@ -17,16 +17,21 @@ export function PixelAvatar({ avatar, size = 'medium', label }: PixelAvatarProps
 
   return (
     <div
-      className={`pixel-avatar pixel-avatar--${size}`}
+      className={`pixel-avatar pixel-avatar--${size} pixel-avatar--${avatar.category.toLowerCase()} pixel-avatar--hair-${avatar.hairStyle} ${
+        avatar.accessory ? `pixel-avatar--${avatar.accessory}` : ''
+      }`}
       style={style}
       role="img"
       aria-label={label ?? `${avatar.name} pixel avatar`}
     >
       <span className="pixel-avatar__hair" />
+      <span className="pixel-avatar__hair-extra" />
       <span className="pixel-avatar__face" />
       <span className="pixel-avatar__eye pixel-avatar__eye--left" />
       <span className="pixel-avatar__eye pixel-avatar__eye--right" />
+      <span className="pixel-avatar__glasses" />
       <span className="pixel-avatar__smile" />
+      <span className="pixel-avatar__hoodie" />
       <span className="pixel-avatar__shirt" />
       <span className="pixel-avatar__spark" />
     </div>

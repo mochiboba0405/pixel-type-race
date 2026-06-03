@@ -4,7 +4,8 @@ A beginner-friendly realtime multiplayer typing race game built with React, Vite
 
 ## What it includes
 
-- Local player profile with display name, pixel avatar, and stats
+- Local player profile with username, pixel avatar, favorite scenery, and stats
+- Categorized Girl, Boy, and Neutral avatars with favorite scenery profiles
 - Room creation with shareable join links
 - Host-only start button
 - Multi-round matches with host-selected round counts
