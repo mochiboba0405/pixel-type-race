@@ -34,6 +34,10 @@ export function getRoomPath(roomId: string) {
   return `/room/${normalizeRoomId(roomId)}`;
 }
 
+export function getRoomChannelName(roomId: string) {
+  return `typing-race-room:${normalizeRoomId(roomId)}`;
+}
+
 export function getRoomUrl(roomId: string) {
   return `${window.location.origin}${getRoomPath(roomId)}`;
 }

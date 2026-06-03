@@ -30,7 +30,10 @@ export function HostControls({
   const connectionText =
     connectionStatus === 'demo'
       ? 'Demo mode is active until Supabase env vars are added.'
+      : connectionStatus === 'offline'
+        ? 'Realtime is offline. Check Supabase env vars and reload.'
       : `${playerCount} player${playerCount === 1 ? '' : 's'} connected.`;
+  const canBroadcast = connectionStatus === 'online' || connectionStatus === 'demo';
 
   if (!isHost) {
     if (phase === 'round-results') {
@@ -83,7 +86,7 @@ export function HostControls({
               ))}
             </select>
           </label>
-          <button className="button button--primary" type="button" onClick={onStartMatch}>
+          <button className="button button--primary" type="button" onClick={onStartMatch} disabled={!canBroadcast}>
             Start Match
           </button>
         </>
@@ -95,7 +98,7 @@ export function HostControls({
             Round {currentRound} of {totalRounds}
           </h2>
           <p className="muted">Start the next round when everyone is ready.</p>
-          <button className="button button--primary" type="button" onClick={onNextRound}>
+          <button className="button button--primary" type="button" onClick={onNextRound} disabled={!canBroadcast}>
             Next Round
           </button>
         </>
@@ -105,7 +108,7 @@ export function HostControls({
         <>
           <h2>Match complete</h2>
           <p className="muted">Play again keeps everyone in this room.</p>
-          <button className="button button--primary" type="button" onClick={onPlayAgain}>
+          <button className="button button--primary" type="button" onClick={onPlayAgain} disabled={!canBroadcast}>
             Play Again
           </button>
         </>

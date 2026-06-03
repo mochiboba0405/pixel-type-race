@@ -43,6 +43,10 @@ export type SceneryChangePayload = {
   sceneryId: string;
 };
 
+export type PlayerProgressPayload = {
+  player: PlayerRaceState;
+};
+
 export type RoundWinner = {
   playerId: string;
   displayName: string;
@@ -78,6 +82,14 @@ export type RaceFinishPayload = {
   totalRounds: RoundCount;
   winner: RoundWinner;
   result: RoundResult;
+};
+
+export type MatchResultsPayload = {
+  matchId: string;
+  totalRounds: RoundCount;
+  roundResults: RoundResult[];
+  scores: MatchScore[];
+  winner: MatchScore | null;
 };
 
 export type MatchScore = {

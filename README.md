@@ -50,9 +50,11 @@ The app also has a local demo mode when Supabase env vars are missing. Demo mode
 
 ## Supabase setup
 
-No database tables are required for this MVP. It uses ephemeral Realtime channels:
+No database tables are required for this MVP. It uses ephemeral Supabase Realtime channels:
 
 - Presence tracks connected players in each room.
-- Broadcast sends host start and race finish events.
+- Broadcast sends host start, next round, progress, round finish, and match result events.
 
 Create a Supabase project, copy the Project URL and anon public key, then place them in your environment variables.
+
+See [supabase/README.md](supabase/README.md) for the complete beginner setup.
