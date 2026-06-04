@@ -4,6 +4,7 @@ import { ProfileModal } from '../components/profile/ProfileModal';
 import { ProfileSetup } from '../components/profile/ProfileSetup';
 import { HostControls } from '../components/room/HostControls';
 import { PlayerList } from '../components/room/PlayerList';
+import { RoomChat } from '../components/room/RoomChat';
 import { RoomInvite } from '../components/room/RoomInvite';
 import { MatchResultsScreen } from '../components/race/MatchResultsScreen';
 import { MatchScoreboard } from '../components/race/MatchScoreboard';
@@ -14,6 +15,7 @@ import { TypingInput } from '../components/race/TypingInput';
 import { TypingPrompt } from '../components/race/TypingPrompt';
 import { SceneryPicker } from '../components/scenery/SceneryPicker';
 import { getRandomSceneryId, getSceneryTheme } from '../data/sceneryThemes';
+import { difficultyLabels } from '../data/prompts';
 import { useLocalProfile } from '../features/profile/useLocalProfile';
 import { isRoomHost, loadRoomScenery } from '../features/room/roomUtils';
 import { useRaceRoom } from '../features/race/useRaceRoom';
@@ -118,6 +120,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
         <div className="room-topbar__pills">
           {race.phase !== 'lobby' ? <span className="round-pill">{roundLabel}</span> : null}
           <span className="theme-label">Scenery: {scenery.name}</span>
+          <span className="theme-label">Difficulty: {difficultyLabels[race.promptDifficulty]}</span>
           <span className={`connection-pill connection-pill--${race.connectionStatus}`}>
             {race.connectionStatus === 'demo'
               ? 'Demo mode'
@@ -149,6 +152,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
           </section>
           <PlayerList playersById={race.playersById} onPlayerProfileClick={setSelectedProfilePlayer} />
           <MatchScoreboard playersById={race.playersById} scores={race.matchScores} />
+          <RoomChat messages={race.chatMessages} onSendMessage={race.sendChatMessage} />
         </aside>
 
         <section className="race-panel">
@@ -161,7 +165,9 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
                 connectionStatus={race.connectionStatus}
                 currentRound={race.currentRound}
                 totalRounds={race.totalRounds}
+                promptDifficulty={race.promptDifficulty}
                 onTotalRoundsChange={race.changeTotalRounds}
+                onDifficultyChange={race.changeDifficulty}
                 onStartMatch={race.startMatch}
                 onNextRound={race.nextRound}
                 onPlayAgain={race.playAgain}
@@ -206,7 +212,9 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
                 connectionStatus={race.connectionStatus}
                 currentRound={race.currentRound}
                 totalRounds={race.totalRounds}
+                promptDifficulty={race.promptDifficulty}
                 onTotalRoundsChange={race.changeTotalRounds}
+                onDifficultyChange={race.changeDifficulty}
                 onStartMatch={race.startMatch}
                 onNextRound={race.nextRound}
                 onPlayAgain={race.playAgain}
@@ -228,7 +236,9 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
                 connectionStatus={race.connectionStatus}
                 currentRound={race.currentRound}
                 totalRounds={race.totalRounds}
+                promptDifficulty={race.promptDifficulty}
                 onTotalRoundsChange={race.changeTotalRounds}
+                onDifficultyChange={race.changeDifficulty}
                 onStartMatch={race.startMatch}
                 onNextRound={race.nextRound}
                 onPlayAgain={race.playAgain}

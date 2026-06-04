@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { DEFAULT_SCENERY_ID } from '../../data/sceneryThemes';
+import { DEFAULT_DIFFICULTY } from '../../data/prompts';
 import { canUseLocalDemoMode, hasSupabaseConfig, supabase } from '../../lib/supabaseClient';
 import type { PlayerProfile } from '../profile/profileTypes';
 import { getRoomChannelName, normalizeRoomId, saveRoomScenery } from '../room/roomUtils';
@@ -20,12 +21,16 @@ import {
 } from './raceUtils';
 import type {
   ConnectionStatus,
+  ChatMessage,
+  ChatMessagePayload,
+  DifficultyChangePayload,
   MatchConfigPayload,
   MatchResultsPayload,
   MatchScore,
   NextRoundPayload,
   PlayerProgressPayload,
   PlayerRaceState,
+  PromptDifficulty,
   RaceFinishPayload,
   RacePhase,
   RaceStartPayload,
@@ -152,6 +157,32 @@ function mergeResultPlayersById(
   );
 }
 
+function getRoundWinnerFromPlayers(
+  playersById: Record<string, RoundPlayerResult>,
+  fallbackWinner: RoundWinner,
+): RoundWinner {
+  const winner = Object.values(playersById).sort(
+    (first, second) =>
+      Number(second.finished) - Number(first.finished) ||
+      second.accuracy - first.accuracy ||
+      second.wpm - first.wpm ||
+      (first.finishMs ?? Number.MAX_SAFE_INTEGER) - (second.finishMs ?? Number.MAX_SAFE_INTEGER) ||
+      first.displayName.localeCompare(second.displayName),
+  )[0];
+
+  if (!winner) {
+    return fallbackWinner;
+  }
+
+  return {
+    playerId: winner.playerId,
+    displayName: winner.displayName,
+    wpm: winner.wpm,
+    accuracy: winner.accuracy,
+    finishMs: winner.finishMs ?? fallbackWinner.finishMs,
+  };
+}
+
 function mergeResultsByRound(
   current: ResultsByRound,
   result: RoundResult,
@@ -208,12 +239,13 @@ function getResultsByRoundFromResults(results: RoundResult[], activePlayersById:
   }>(
     (state, result) => {
       const roundNumber = getRoundResultKey(result);
+      const resultsByRound = mergeResultsByRound(state.resultsByRound, result, activePlayersById);
 
       return {
-        resultsByRound: mergeResultsByRound(state.resultsByRound, result, activePlayersById),
+        resultsByRound,
         winnersByRound: {
           ...state.winnersByRound,
-          [roundNumber]: state.winnersByRound[roundNumber] ?? result.winner,
+          [roundNumber]: getRoundWinnerFromPlayers(resultsByRound[roundNumber] ?? {}, result.winner),
         },
         metaByRound: {
           ...state.metaByRound,
@@ -259,6 +291,20 @@ function logResultsByRoundKeys(roomCode: string, channelName: string, resultsByR
       Object.entries(resultsByRound).map(([roundNumber, playersById]) => [roundNumber, Object.keys(playersById)]),
     ),
   });
+}
+
+function createChatMessageId(playerId: string) {
+  return `chat-${playerId}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function addChatMessage(messages: ChatMessage[], message: ChatMessage) {
+  const nextMessages = messages.some((savedMessage) => savedMessage.id === message.id)
+    ? messages
+    : [...messages, message];
+
+  return [...nextMessages]
+    .sort((first, second) => first.timestamp - second.timestamp)
+    .slice(-50);
 }
 
 function getPlayerProgress(player: PlayerRaceState): ProgressByPlayerId[string] {
@@ -308,6 +354,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   const channelKey = `${channelName}:${profile.id}`;
   const [phase, setPhase] = useState<RacePhase>('lobby');
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
+  const [promptDifficulty, setPromptDifficulty] = useState<PromptDifficulty>(DEFAULT_DIFFICULTY);
   const [matchId, setMatchId] = useState<string | null>(null);
   const [roundId, setRoundId] = useState<string | null>(null);
   const [currentRound, setCurrentRound] = useState(1);
@@ -321,6 +368,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   const [matchWinner, setMatchWinner] = useState<MatchScore | null>(null);
   const [playersById, setPlayersById] = useState<PlayersById>({});
   const [progressByPlayerId, setProgressByPlayerId] = useState<ProgressByPlayerId>({});
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(
     hasSupabaseConfig ? 'connecting' : canUseLocalDemoMode ? 'demo' : 'offline',
   );
@@ -344,6 +392,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   const activeChannelKeyRef = useRef<string | null>(null);
   const matchIdRef = useRef<string | null>(matchId);
   const roundIdRef = useRef<string | null>(roundId);
+  const promptDifficultyRef = useRef(promptDifficulty);
   const currentRoundRef = useRef(currentRound);
   const totalRoundsRef = useRef(totalRounds);
   const sceneryIdRef = useRef(sceneryId);
@@ -367,6 +416,10 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   useEffect(() => {
     roundIdRef.current = roundId;
   }, [roundId]);
+
+  useEffect(() => {
+    promptDifficultyRef.current = promptDifficulty;
+  }, [promptDifficulty]);
 
   useEffect(() => {
     currentRoundRef.current = currentRound;
@@ -671,11 +724,6 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     const activePlayersById = playersByIdRef.current;
     const cleanResult = getRoundResultWithActivePlayers(result, activePlayersById);
     const roundNumber = getRoundResultKey(cleanResult);
-
-    setRoundWinnersByRound((current) => ({
-      ...current,
-      [roundNumber]: current[roundNumber] ?? cleanResult.winner,
-    }));
     setRoundMetaByRound((current) => ({
       ...current,
       [roundNumber]: current[roundNumber] ?? getRoundMeta(cleanResult),
@@ -684,9 +732,10 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
 
     setResultsByRound((current) => {
       const next = mergeResultsByRound(current, cleanResult, activePlayersById);
+      const nextWinner = getRoundWinnerFromPlayers(next[roundNumber] ?? {}, cleanResult.winner);
       const nextWinnersByRound = {
         ...roundWinnersByRoundRef.current,
-        [roundNumber]: roundWinnersByRoundRef.current[roundNumber] ?? cleanResult.winner,
+        [roundNumber]: nextWinner,
       };
       const nextMetaByRound = {
         ...roundMetaByRoundRef.current,
@@ -696,6 +745,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       const scores = buildMatchScores(nextRoundResults);
 
       logResultsByRoundKeys(roomCode, channelName, next);
+      setRoundWinnersByRound(nextWinnersByRound);
       setMatchScores(scores);
       setMatchWinner(cleanResult.roundNumber >= cleanResult.totalRounds ? getMatchWinner(scores) : null);
 
@@ -746,6 +796,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       setMatchId(payload.matchId);
       setCurrentRound(payload.roundNumber);
       setTotalRounds(payload.totalRounds);
+      setPromptDifficulty(payload.difficulty ?? promptDifficultyRef.current);
       setSceneryId(payload.sceneryId);
       saveRoomScenery(roomId, payload.sceneryId);
       setPrompt(payload.prompt);
@@ -1052,14 +1103,33 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           return nextProgressByPlayerId;
         });
       })
+      .on('broadcast', { event: 'chat-message' }, ({ payload }) => {
+        const message = (payload as ChatMessagePayload).message;
+        console.log('[type-race realtime] chat message received', {
+          roomCode,
+          channelName,
+          messageId: message.id,
+          playerId: message.playerId,
+        });
+        setChatMessages((current) => addChatMessage(current, message));
+      })
       .on('broadcast', { event: 'match-config' }, ({ payload }) => {
         console.log('[type-race realtime] match config event received', {
           roomCode,
           channelName,
           payload,
         });
-        const nextTotalRounds = (payload as MatchConfigPayload).totalRounds;
-        setTotalRounds(nextTotalRounds);
+        const config = payload as MatchConfigPayload;
+        setTotalRounds(config.totalRounds);
+        setPromptDifficulty(config.difficulty ?? promptDifficultyRef.current);
+      })
+      .on('broadcast', { event: 'difficulty-change' }, ({ payload }) => {
+        console.log('[type-race realtime] difficulty event received', {
+          roomCode,
+          channelName,
+          payload,
+        });
+        setPromptDifficulty((payload as DifficultyChangePayload).difficulty ?? promptDifficultyRef.current);
       })
       .on('broadcast', { event: 'scenery-change' }, ({ payload }) => {
         console.log('[type-race realtime] scenery event received', {
@@ -1183,20 +1253,71 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       setTotalRounds(nextTotalRounds);
 
       if (channelRef.current) {
-        sendRoomEvent('match-config', { totalRounds: nextTotalRounds } satisfies MatchConfigPayload);
+        sendRoomEvent('match-config', {
+          totalRounds: nextTotalRounds,
+          difficulty: promptDifficultyRef.current,
+        } satisfies MatchConfigPayload);
       }
     },
     [sendRoomEvent],
   );
 
+  const changeDifficulty = useCallback(
+    (nextDifficulty: PromptDifficulty) => {
+      setPromptDifficulty(nextDifficulty);
+
+      if (channelRef.current) {
+        sendRoomEvent('difficulty-change', { difficulty: nextDifficulty } satisfies DifficultyChangePayload);
+        sendRoomEvent('match-config', {
+          totalRounds: totalRoundsRef.current,
+          difficulty: nextDifficulty,
+        } satisfies MatchConfigPayload);
+      }
+    },
+    [sendRoomEvent],
+  );
+
+  const sendChatMessage = useCallback(
+    (text: string) => {
+      const trimmedText = text.trim();
+
+      if (!trimmedText) {
+        return false;
+      }
+
+      const message: ChatMessage = {
+        id: createChatMessageId(profile.id),
+        playerId: profile.id,
+        displayName: profile.username,
+        avatarId: profile.avatarId,
+        avatar: profile.avatar,
+        timestamp: Date.now(),
+        text: trimmedText.slice(0, 200),
+      };
+
+      const sentThroughRealtime = sendRoomEvent('chat-message', {
+        message,
+      } satisfies ChatMessagePayload);
+
+      if (!sentThroughRealtime) {
+        setChatMessages((current) => addChatMessage(current, message));
+      }
+
+      return true;
+    },
+    [profile.avatar, profile.avatarId, profile.id, profile.username, sendRoomEvent],
+  );
+
   const startRound = useCallback(
     (nextMatchId: string, roundNumber: number, nextTotalRounds: RoundCount) => {
-      const nextPrompt = getRandomPrompt(promptHistoryRef.current);
+      const nextDifficulty = promptDifficultyRef.current;
+      const nextPrompt = getRandomPrompt(nextDifficulty, promptHistoryRef.current);
       promptHistoryRef.current = [...promptHistoryRef.current, nextPrompt];
 
       const payload: RaceStartPayload = {
         matchId: nextMatchId,
         prompt: nextPrompt,
+        difficulty: nextDifficulty,
         roundId: createRoundId(),
         roundNumber,
         totalRounds: nextTotalRounds,
@@ -1358,7 +1479,10 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           );
           const finalWinnersByRound = {
             ...roundWinnersByRoundRef.current,
-            [result.roundNumber]: roundWinnersByRoundRef.current[result.roundNumber] ?? result.winner,
+            [result.roundNumber]: getRoundWinnerFromPlayers(
+              finalResultsByRound[result.roundNumber] ?? {},
+              result.winner,
+            ),
           };
           const finalMetaByRound = {
             ...roundMetaByRoundRef.current,
@@ -1389,6 +1513,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     connectionStatus,
     phase,
     prompt,
+    promptDifficulty,
     matchId,
     roundId,
     currentRound,
@@ -1399,6 +1524,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     roundResults,
     matchScores,
     matchWinner,
+    chatMessages,
     players,
     playersById: renderedPlayersById,
     progressByPlayerId,
@@ -1412,6 +1538,8 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     playAgain,
     changeScenery,
     changeTotalRounds,
+    changeDifficulty,
+    sendChatMessage,
     updateMyProgress,
   };
 }

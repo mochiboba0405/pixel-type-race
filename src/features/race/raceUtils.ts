@@ -1,14 +1,19 @@
-import { prompts } from '../../data/prompts';
-import type { MatchScore, RoundCount, RoundPlayerResult, RoundResult } from './raceTypes';
+import { createGeneratedPrompt, DEFAULT_DIFFICULTY, getPromptPool } from '../../data/prompts';
+import type { MatchScore, PromptDifficulty, RoundCount, RoundPlayerResult, RoundResult } from './raceTypes';
 
-export const DEFAULT_PROMPT = prompts[0];
+export const DEFAULT_PROMPT = getPromptPool(DEFAULT_DIFFICULTY)[0];
 export const DEFAULT_ROUND_COUNT: RoundCount = 3;
 export const ROUND_COUNT_OPTIONS = [1, 3, 5, 7, 10] as const;
 
-export function getRandomPrompt(excludedPrompts: string[] = []) {
+export function getRandomPrompt(difficulty: PromptDifficulty, excludedPrompts: string[] = []) {
+  const prompts = getPromptPool(difficulty);
   const unusedPrompts = prompts.filter((prompt) => !excludedPrompts.includes(prompt));
-  const promptPool = unusedPrompts.length > 0 ? unusedPrompts : prompts;
-  return promptPool[Math.floor(Math.random() * promptPool.length)];
+
+  if (unusedPrompts.length > 0) {
+    return unusedPrompts[Math.floor(Math.random() * unusedPrompts.length)];
+  }
+
+  return createGeneratedPrompt(difficulty);
 }
 
 export function createRoundId() {

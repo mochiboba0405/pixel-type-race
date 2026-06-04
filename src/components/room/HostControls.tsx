@@ -1,4 +1,5 @@
-import type { ConnectionStatus, RacePhase } from '../../features/race/raceTypes';
+import { difficultyLabels, difficultyOptions } from '../../data/prompts';
+import type { ConnectionStatus, PromptDifficulty, RacePhase } from '../../features/race/raceTypes';
 import type { RoundCount } from '../../features/race/raceTypes';
 import { ROUND_COUNT_OPTIONS } from '../../features/race/raceUtils';
 
@@ -9,7 +10,9 @@ type HostControlsProps = {
   connectionStatus: ConnectionStatus;
   currentRound: number;
   totalRounds: RoundCount;
+  promptDifficulty: PromptDifficulty;
   onTotalRoundsChange: (rounds: RoundCount) => void;
+  onDifficultyChange: (difficulty: PromptDifficulty) => void;
   onStartMatch: () => void;
   onNextRound: () => void;
   onPlayAgain: () => void;
@@ -22,7 +25,9 @@ export function HostControls({
   connectionStatus,
   currentRound,
   totalRounds,
+  promptDifficulty,
   onTotalRoundsChange,
+  onDifficultyChange,
   onStartMatch,
   onNextRound,
   onPlayAgain,
@@ -82,6 +87,19 @@ export function HostControls({
               {ROUND_COUNT_OPTIONS.map((rounds) => (
                 <option key={rounds} value={rounds}>
                   {rounds} round{rounds === 1 ? '' : 's'}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Difficulty</span>
+            <select
+              value={promptDifficulty}
+              onChange={(event) => onDifficultyChange(event.target.value as PromptDifficulty)}
+            >
+              {difficultyOptions.map((difficulty) => (
+                <option key={difficulty} value={difficulty}>
+                  {difficultyLabels[difficulty]}
                 </option>
               ))}
             </select>

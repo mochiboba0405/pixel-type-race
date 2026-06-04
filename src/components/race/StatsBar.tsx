@@ -21,6 +21,10 @@ export function StatsBar({ metrics }: StatsBarProps) {
         <span>Progress</span>
       </div>
       <div>
+        <strong>{metrics.incorrectChars + metrics.extraChars}</strong>
+        <span>Mistakes</span>
+      </div>
+      <div>
         <strong>{formatDuration(metrics.elapsedMs)}</strong>
         <span>Time</span>
       </div>

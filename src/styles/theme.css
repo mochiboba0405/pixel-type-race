@@ -207,7 +207,7 @@
 }
 
 .stats-bar {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .stats-grid div,
@@ -587,6 +587,13 @@
   color: #fecaca;
 }
 
+.typing-prompt__char--extra {
+  background: rgba(251, 113, 133, 0.3);
+  color: #fecdd3;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
 .typing-input {
   display: grid;
   gap: 8px;
@@ -733,6 +740,68 @@
 
 .stats-grid--profile {
   margin-top: 18px;
+}
+
+.room-chat {
+  display: grid;
+  gap: 12px;
+}
+
+.room-chat__messages {
+  display: grid;
+  gap: 10px;
+  max-height: 280px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.room-chat__message {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  border: 1px solid rgba(125, 211, 252, 0.14);
+  border-radius: 8px;
+  background: rgba(8, 15, 42, 0.34);
+  padding: 9px;
+}
+
+.room-chat__message p {
+  margin: 4px 0 0;
+  color: rgba(235, 245, 255, 0.86);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.room-chat__meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.room-chat__meta strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #f8fbff;
+  font-size: 0.86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-chat__meta span {
+  flex: 0 0 auto;
+  color: rgba(191, 219, 254, 0.62);
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.room-chat__form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
 }
 
 @media (max-width: 860px) {

@@ -4,6 +4,8 @@ type TypingPromptProps = {
 };
 
 export function TypingPrompt({ prompt, typed }: TypingPromptProps) {
+  const extraTyped = typed.slice(prompt.length);
+
   return (
     <div className="typing-prompt" aria-label="Typing prompt">
       {prompt.split('').map((character, index) => {
@@ -24,6 +26,11 @@ export function TypingPrompt({ prompt, typed }: TypingPromptProps) {
           </span>
         );
       })}
+      {extraTyped.split('').map((character, index) => (
+        <span className="typing-prompt__char typing-prompt__char--extra" key={`extra-${character}-${index}`}>
+          {character === ' ' ? '\u00A0' : character}
+        </span>
+      ))}
     </div>
   );
 }
