@@ -132,7 +132,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
       </div>
 
       <div className="room-grid">
-        <aside className="room-sidebar">
+        <aside className="room-left-sidebar">
           <ProfileSetup profile={profile} onChange={updateProfile} compact />
           <RoomInvite roomId={roomId} />
           <section className="panel scenery-card">
@@ -150,9 +150,6 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
               <p className="muted">The host controls the shared scenery.</p>
             )}
           </section>
-          <PlayerList playersById={race.playersById} onPlayerProfileClick={setSelectedProfilePlayer} />
-          <MatchScoreboard playersById={race.playersById} scores={race.matchScores} />
-          <RoomChat messages={race.chatMessages} onSendMessage={race.sendChatMessage} />
         </aside>
 
         <section className="race-panel">
@@ -246,6 +243,12 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
             </div>
           ) : null}
         </section>
+
+        <aside className="room-right-sidebar">
+          <PlayerList playersById={race.playersById} onPlayerProfileClick={setSelectedProfilePlayer} />
+          <MatchScoreboard playersById={race.playersById} scores={race.matchScores} />
+          <RoomChat messages={race.chatMessages} onSendMessage={race.sendChatMessage} />
+        </aside>
       </div>
       <ProfileModal player={selectedProfilePlayer} onClose={() => setSelectedProfilePlayer(null)} />
     </PageShell>

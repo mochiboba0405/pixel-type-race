@@ -1,23 +1,23 @@
 .page-shell {
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .page-shell__content {
   position: relative;
   z-index: 2;
-  width: min(1180px, calc(100% - 32px));
+  width: min(1520px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 28px 0 128px;
+  padding: 22px 0 96px;
 }
 
 .hero {
-  min-height: 22vh;
+  min-height: 16vh;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 42px 0 24px;
+  padding: 30px 0 18px;
 }
 
 .hero__eyebrow,
@@ -40,8 +40,7 @@
   text-shadow: 0 2px 12px rgba(4, 8, 24, 0.72);
 }
 
-.home-grid,
-.room-grid {
+.home-grid {
   display: grid;
   grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
   gap: 18px;
@@ -49,12 +48,34 @@
 }
 
 .room-grid {
-  grid-template-columns: minmax(260px, 342px) minmax(0, 1fr);
+  display: grid;
+  grid-template-columns: minmax(250px, 320px) minmax(520px, 1fr) minmax(270px, 340px);
+  gap: 16px;
+  align-items: start;
 }
 
-.room-sidebar {
+.room-left-sidebar,
+.room-right-sidebar {
   display: grid;
-  gap: 14px;
+  align-content: start;
+  gap: 12px;
+}
+
+.room-left-sidebar,
+.room-right-sidebar {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+}
+
+.room-left-sidebar {
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.room-right-sidebar {
+  grid-template-rows: auto auto minmax(260px, 1fr);
+  min-height: min(720px, calc(100vh - 32px));
 }
 
 .panel,
@@ -76,8 +97,8 @@
 }
 
 .race-panel {
-  min-height: 540px;
-  padding: 20px;
+  min-height: 0;
+  padding: 18px;
 }
 
 .panel__title-row,
@@ -110,6 +131,20 @@
 
 .profile-setup--compact .avatar-picker {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.room-left-sidebar .panel,
+.room-right-sidebar .panel {
+  padding: 14px;
+}
+
+.room-left-sidebar .profile-setup,
+.room-left-sidebar .scenery-card {
+  gap: 12px;
+}
+
+.room-left-sidebar .avatar-picker {
+  max-height: 270px;
 }
 
 .field {
@@ -388,6 +423,20 @@
   gap: 10px;
 }
 
+.room-right-sidebar .player-list {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: 240px;
+  min-height: 150px;
+  overflow: hidden;
+}
+
+.room-right-sidebar .player-list__items {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
 .match-scoreboard {
   display: grid;
   gap: 12px;
@@ -396,6 +445,17 @@
 .match-scoreboard__rows {
   display: grid;
   gap: 10px;
+}
+
+.room-right-sidebar .match-scoreboard {
+  max-height: 180px;
+  overflow: hidden;
+}
+
+.room-right-sidebar .match-scoreboard__rows {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .score-row {
@@ -407,6 +467,11 @@
   border-radius: 8px;
   background: rgba(8, 15, 42, 0.34);
   padding: 9px;
+}
+
+.room-right-sidebar .score-row,
+.room-right-sidebar .player-card {
+  padding: 8px;
 }
 
 .score-row div {
@@ -516,12 +581,12 @@
 .active-race,
 .finished-race {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .countdown-state {
   display: grid;
-  min-height: 460px;
+  min-height: 360px;
   place-items: center;
   align-content: center;
   text-align: center;
@@ -744,13 +809,18 @@
 
 .room-chat {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px;
+  min-height: 320px;
+  overflow: hidden;
 }
 
 .room-chat__messages {
   display: grid;
+  align-content: start;
   gap: 10px;
-  max-height: 280px;
+  min-height: 0;
+  max-height: none;
   overflow: auto;
   padding-right: 2px;
 }
@@ -804,6 +874,39 @@
   gap: 8px;
 }
 
+.room-chat__form input {
+  min-height: 40px;
+}
+
+@media (max-width: 1180px) {
+  .page-shell__content {
+    width: min(100% - 24px, 1080px);
+  }
+
+  .room-grid {
+    grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  }
+
+  .room-right-sidebar {
+    position: static;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .room-right-sidebar .player-list,
+  .room-right-sidebar .match-scoreboard,
+  .room-chat {
+    max-height: 340px;
+  }
+
+  .room-chat {
+    min-height: 300px;
+  }
+}
+
 @media (max-width: 860px) {
   .page-shell__content {
     width: min(100% - 20px, 680px);
@@ -821,9 +924,31 @@
     grid-template-columns: 1fr;
   }
 
+  .room-left-sidebar,
+  .room-right-sidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .room-right-sidebar {
+    grid-template-columns: 1fr;
+  }
+
   .race-panel {
-    min-height: 420px;
+    min-height: 0;
     padding: 14px;
+  }
+
+  .room-right-sidebar .player-list,
+  .room-right-sidebar .match-scoreboard,
+  .room-chat {
+    max-height: none;
+  }
+
+  .room-chat {
+    min-height: 320px;
   }
 
   .stats-grid,
