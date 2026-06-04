@@ -1,33 +1,43 @@
-import type { RoundResult } from '../../features/race/raceTypes';
+import type { RoundPlayerResult, RoundWinner } from '../../features/race/raceTypes';
+import { dedupeRoundPlayers } from '../../features/race/raceUtils';
 import { formatDuration } from '../../features/race/typingMetrics';
 import { PixelAvatar } from '../profile/PixelAvatar';
 
 type RoundResultsScreenProps = {
-  result: RoundResult;
+  roundNumber: number;
+  totalRounds: number;
+  winner: RoundWinner;
+  resultsByPlayerId: Record<string, RoundPlayerResult>;
 };
 
-export function RoundResultsScreen({ result }: RoundResultsScreenProps) {
-  const winningPlayer = result.players.find((player) => player.playerId === result.winner.playerId);
+export function RoundResultsScreen({
+  roundNumber,
+  totalRounds,
+  winner,
+  resultsByPlayerId,
+}: RoundResultsScreenProps) {
+  const players = dedupeRoundPlayers(Object.values(resultsByPlayerId));
+  const winningPlayer = resultsByPlayerId[winner.playerId];
 
   return (
     <section className="winner-screen">
       <div className="winner-screen__main">
         {winningPlayer ? <PixelAvatar avatar={winningPlayer.avatar} size="large" /> : null}
         <p className="section-label">
-          Round {result.roundNumber} of {result.totalRounds}
+          Round {roundNumber} of {totalRounds}
         </p>
-        <h2>{result.winner.displayName}</h2>
+        <h2>{winner.displayName}</h2>
         <p>
-          {result.winner.wpm} WPM, {result.winner.accuracy}% accuracy, {formatDuration(result.winner.finishMs)}
+          {winner.wpm} WPM, {winner.accuracy}% accuracy, {formatDuration(winner.finishMs)}
         </p>
       </div>
 
       <div className="results-table">
-        {result.players.map((player) => (
+        {players.map((player) => (
           <article className="result-row result-row--wide" key={player.playerId}>
             <div>
               <strong>{player.displayName}</strong>
-              <span>{player.playerId === result.winner.playerId ? 'Round winner' : 'Round result'}</span>
+              <span>{player.playerId === winner.playerId ? 'Round winner' : 'Round result'}</span>
             </div>
             <div>
               <strong>{player.wpm}</strong>

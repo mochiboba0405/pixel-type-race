@@ -1,23 +1,26 @@
 import type { PlayerRaceState } from '../../features/race/raceTypes';
+import { sortPlayers } from '../../features/race/raceUtils';
 import { PixelAvatar } from '../profile/PixelAvatar';
 
 type PlayerListProps = {
-  players: PlayerRaceState[];
+  playersById: Record<string, PlayerRaceState>;
   onPlayerProfileClick?: (player: PlayerRaceState) => void;
 };
 
-export function PlayerList({ players, onPlayerProfileClick }: PlayerListProps) {
+export function PlayerList({ playersById, onPlayerProfileClick }: PlayerListProps) {
+  const visiblePlayers = sortPlayers(Object.values(playersById));
+
   return (
     <section className="panel player-list">
       <div className="panel__title-row">
         <div>
           <p className="section-label">Players</p>
-          <h2>{players.length}</h2>
+          <h2>{visiblePlayers.length}</h2>
         </div>
       </div>
 
       <div className="player-list__items">
-        {players.map((player) => (
+        {visiblePlayers.map((player) => (
           <article className="player-card" key={player.playerId}>
             <button
               className="avatar-profile-button"

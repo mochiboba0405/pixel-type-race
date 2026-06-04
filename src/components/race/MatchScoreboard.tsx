@@ -1,17 +1,19 @@
 import type { MatchScore, PlayerRaceState } from '../../features/race/raceTypes';
-import { sortMatchScores } from '../../features/race/raceUtils';
+import { dedupeMatchScores, sortPlayers } from '../../features/race/raceUtils';
 import { PixelAvatar } from '../profile/PixelAvatar';
 
 type MatchScoreboardProps = {
-  players: PlayerRaceState[];
+  playersById: Record<string, PlayerRaceState>;
   scores: MatchScore[];
 };
 
-export function MatchScoreboard({ players, scores }: MatchScoreboardProps) {
-  const scoreRows = sortMatchScores([
-    ...scores,
-    ...players
-      .filter((player) => !scores.some((score) => score.playerId === player.playerId))
+export function MatchScoreboard({ playersById, scores }: MatchScoreboardProps) {
+  const cleanScores = dedupeMatchScores(scores);
+  const visiblePlayers = sortPlayers(Object.values(playersById));
+  const scoreRows = dedupeMatchScores([
+    ...cleanScores,
+    ...visiblePlayers
+      .filter((player) => !cleanScores.some((score) => score.playerId === player.playerId))
       .map((player) => ({
         playerId: player.playerId,
         displayName: player.displayName,

@@ -147,8 +147,8 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
               <p className="muted">The host controls the shared scenery.</p>
             )}
           </section>
-          <PlayerList players={race.players} onPlayerProfileClick={setSelectedProfilePlayer} />
-          <MatchScoreboard players={race.players} scores={race.matchScores} />
+          <PlayerList playersById={race.playersById} onPlayerProfileClick={setSelectedProfilePlayer} />
+          <MatchScoreboard playersById={race.playersById} scores={race.matchScores} />
         </aside>
 
         <section className="race-panel">
@@ -157,7 +157,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
               <HostControls
                 isHost={host}
                 phase={race.phase}
-                playerCount={race.players.length}
+                playerCount={race.playerCount}
                 connectionStatus={race.connectionStatus}
                 currentRound={race.currentRound}
                 totalRounds={race.totalRounds}
@@ -166,7 +166,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
                 onNextRound={race.nextRound}
                 onPlayAgain={race.playAgain}
               />
-              <RaceTrack players={race.players} />
+              <RaceTrack playersById={race.playersById} />
             </div>
           ) : null}
 
@@ -183,21 +183,26 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
               <div className="round-banner">
                 <span>{roundLabel}</span>
               </div>
-              <RaceTrack players={race.players} />
+              <RaceTrack playersById={race.playersById} />
               <StatsBar metrics={metrics} />
               <TypingPrompt prompt={race.prompt} typed={typed} />
               <TypingInput value={typed} disabled={inputDisabled} onChange={setTyped} />
             </div>
           ) : null}
 
-          {race.phase === 'round-results' && race.roundResult ? (
+          {race.phase === 'round-results' && race.roundResult && race.winner ? (
             <div className="finished-race">
-              <RoundResultsScreen result={race.roundResult} />
-              <RaceTrack players={race.players} />
+              <RoundResultsScreen
+                roundNumber={race.currentRound}
+                totalRounds={race.totalRounds}
+                winner={race.winner}
+                resultsByPlayerId={race.currentRoundResultsByPlayerId}
+              />
+              <RaceTrack playersById={race.playersById} />
               <HostControls
                 isHost={host}
                 phase={race.phase}
-                playerCount={race.players.length}
+                playerCount={race.playerCount}
                 connectionStatus={race.connectionStatus}
                 currentRound={race.currentRound}
                 totalRounds={race.totalRounds}
@@ -219,7 +224,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
               <HostControls
                 isHost={host}
                 phase={race.phase}
-                playerCount={race.players.length}
+                playerCount={race.playerCount}
                 connectionStatus={race.connectionStatus}
                 currentRound={race.currentRound}
                 totalRounds={race.totalRounds}

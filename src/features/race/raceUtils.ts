@@ -1,5 +1,5 @@
 import { prompts } from '../../data/prompts';
-import type { MatchScore, RoundCount, RoundResult } from './raceTypes';
+import type { MatchScore, RoundCount, RoundPlayerResult, RoundResult } from './raceTypes';
 
 export const DEFAULT_PROMPT = prompts[0];
 export const DEFAULT_ROUND_COUNT: RoundCount = 3;
@@ -22,7 +22,7 @@ export function createMatchId() {
 export function buildMatchScores(results: RoundResult[]): MatchScore[] {
   const scoreMap = new Map<string, MatchScore>();
 
-  for (const result of results) {
+  for (const result of dedupeRoundResults(results)) {
     for (const player of result.players) {
       const previous = scoreMap.get(player.playerId);
       const roundWins = (previous?.roundWins ?? 0) + (result.winner.playerId === player.playerId ? 1 : 0);
@@ -48,6 +48,77 @@ export function buildMatchScores(results: RoundResult[]): MatchScore[] {
   return sortMatchScores(Array.from(scoreMap.values()));
 }
 
+export function dedupePlayers<T extends PlayerRaceStateLikeWithId>(players: T[]) {
+  const playerMap = new Map<string, T>();
+
+  for (const player of players) {
+    const previous = playerMap.get(player.playerId);
+
+    if (!previous || (player.lastSeen ?? 0) >= (previous.lastSeen ?? 0)) {
+      playerMap.set(player.playerId, player);
+    }
+  }
+
+  return Array.from(playerMap.values());
+}
+
+export function dedupeRoundPlayers(players: RoundPlayerResult[]) {
+  const playerMap = new Map<string, RoundPlayerResult>();
+
+  for (const player of players) {
+    const previous = playerMap.get(player.playerId);
+
+    if (!previous || (player.finished && !previous.finished)) {
+      playerMap.set(player.playerId, player);
+      continue;
+    }
+
+    if (
+      previous.finished === player.finished &&
+      (player.finishMs ?? Number.MAX_SAFE_INTEGER) < (previous.finishMs ?? Number.MAX_SAFE_INTEGER)
+    ) {
+      playerMap.set(player.playerId, player);
+    }
+  }
+
+  return Array.from(playerMap.values());
+}
+
+export function dedupeRoundResult(result: RoundResult): RoundResult {
+  return {
+    ...result,
+    players: dedupeRoundPlayers(result.players),
+  };
+}
+
+export function dedupeRoundResults(results: RoundResult[]) {
+  const resultMap = new Map<string, RoundResult>();
+
+  for (const result of results) {
+    const key = result.roundId || `${result.matchId}:${result.roundNumber}`;
+
+    if (!resultMap.has(key)) {
+      resultMap.set(key, dedupeRoundResult(result));
+    }
+  }
+
+  return Array.from(resultMap.values()).sort((first, second) => first.roundNumber - second.roundNumber);
+}
+
+export function dedupeMatchScores(scores: MatchScore[]) {
+  const scoreMap = new Map<string, MatchScore>();
+
+  for (const score of scores) {
+    const previous = scoreMap.get(score.playerId);
+
+    if (!previous || score.roundsPlayed >= previous.roundsPlayed) {
+      scoreMap.set(score.playerId, score);
+    }
+  }
+
+  return sortMatchScores(Array.from(scoreMap.values()));
+}
+
 export function sortMatchScores(scores: MatchScore[]) {
   return [...scores].sort(
     (first, second) =>
@@ -67,7 +138,7 @@ export function isRoundCount(value: number): value is RoundCount {
 }
 
 export function sortPlayers<T extends PlayerRaceStateLike>(players: T[]) {
-  return [...players].sort((first, second) => {
+  return dedupePlayers(players).sort((first, second) => {
     if (first.isHost !== second.isHost) {
       return first.isHost ? -1 : 1;
     }
@@ -81,8 +152,15 @@ export function sortPlayers<T extends PlayerRaceStateLike>(players: T[]) {
 }
 
 type PlayerRaceStateLike = {
+  playerId: string;
   displayName: string;
   isHost: boolean;
   finished: boolean;
   progress: number;
+  lastSeen?: number;
+};
+
+type PlayerRaceStateLikeWithId = {
+  playerId: string;
+  lastSeen?: number;
 };

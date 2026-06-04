@@ -5,7 +5,8 @@ import { readJson, writeJson } from '../../lib/storage';
 import type { PlayerProfile, RaceResultForStats } from './profileTypes';
 
 const PROFILE_KEY = 'pixel-type-race:profile';
-const SESSION_PLAYER_KEY = 'pixel-type-race:session-player-id';
+const PLAYER_ID_KEY = 'pixel-type-race:player-id';
+const LEGACY_SESSION_PLAYER_KEY = 'pixel-type-race:session-player-id';
 
 const defaultStats = {
   races: 0,
@@ -15,16 +16,17 @@ const defaultStats = {
   averageAccuracy: 100,
 };
 
-function getSessionPlayerId(savedId?: string) {
+function getStablePlayerId(savedId?: string) {
   try {
-    const existing = sessionStorage.getItem(SESSION_PLAYER_KEY);
+    const existing = localStorage.getItem(PLAYER_ID_KEY);
 
     if (existing) {
       return existing;
     }
 
-    const next = createPlayerId();
-    sessionStorage.setItem(SESSION_PLAYER_KEY, next);
+    const legacySessionId = sessionStorage.getItem(LEGACY_SESSION_PLAYER_KEY);
+    const next = savedId ?? legacySessionId ?? createPlayerId();
+    localStorage.setItem(PLAYER_ID_KEY, next);
     return next;
   } catch {
     return savedId ?? createPlayerId();
@@ -36,7 +38,7 @@ function createDefaultProfile(): PlayerProfile {
   const username = `Racer ${Math.floor(100 + Math.random() * 900)}`;
 
   return {
-    id: getSessionPlayerId(),
+    id: getStablePlayerId(),
     username,
     displayName: username,
     avatarId: avatar.id,
@@ -60,7 +62,7 @@ export function loadProfile(): PlayerProfile {
 
   return {
     ...saved,
-    id: getSessionPlayerId(saved.id),
+    id: getStablePlayerId(saved.id),
     username,
     displayName: username,
     avatar,

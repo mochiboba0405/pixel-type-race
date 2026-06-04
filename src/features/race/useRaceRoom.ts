@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { DEFAULT_SCENERY_ID } from '../../data/sceneryThemes';
 import { canUseLocalDemoMode, hasSupabaseConfig, supabase } from '../../lib/supabaseClient';
@@ -10,6 +10,10 @@ import {
   buildMatchScores,
   createMatchId,
   createRoundId,
+  dedupePlayers,
+  dedupeRoundResult,
+  dedupeRoundResults,
+  dedupeRoundPlayers,
   getMatchWinner,
   getRandomPrompt,
   sortPlayers,
@@ -25,6 +29,7 @@ import type {
   RacePhase,
   RaceStartPayload,
   RoundCount,
+  RoundPlayerResult,
   RoundResult,
   RoundWinner,
   SceneryChangePayload,
@@ -38,6 +43,263 @@ type UseRaceRoomArgs = {
   initialSceneryId?: string | null;
 };
 
+type PlayersById = Record<string, PlayerRaceState>;
+type ProgressByPlayerId = Record<
+  string,
+  Pick<PlayerRaceState, 'progress' | 'wpm' | 'accuracy' | 'finished' | 'finishMs' | 'lastSeen'>
+>;
+type ResultsByRound = Record<number, Record<string, RoundPlayerResult>>;
+type RoundWinnersByRound = Record<number, RoundWinner>;
+type RoundMetaByRound = Record<
+  number,
+  {
+    matchId: string;
+    roundId: string;
+    roundNumber: number;
+    totalRounds: RoundCount;
+  }
+>;
+
+function getCanonicalPlayerId(player: Pick<PlayerRaceState, 'playerId'>) {
+  return player.playerId;
+}
+
+function getRoundResultKey(result: Pick<RoundResult, 'roundNumber'>) {
+  return result.roundNumber;
+}
+
+function getProgressPlayer(player: PlayerRaceState, progress?: ProgressByPlayerId[string]): PlayerRaceState {
+  return {
+    ...player,
+    progress: progress?.progress ?? player.progress,
+    wpm: progress?.wpm ?? player.wpm,
+    accuracy: progress?.accuracy ?? player.accuracy,
+    finished: progress?.finished ?? player.finished,
+    finishMs: progress?.finishMs ?? player.finishMs,
+    lastSeen: Math.max(player.lastSeen, progress?.lastSeen ?? 0),
+  };
+}
+
+function getPlayersWithProgress(playersById: PlayersById, progressByPlayerId: ProgressByPlayerId) {
+  return sortPlayers(
+    Object.values(playersById).map((player) => getProgressPlayer(player, progressByPlayerId[getCanonicalPlayerId(player)])),
+  );
+}
+
+function getPlayersByIdWithProgress(playersById: PlayersById, progressByPlayerId: ProgressByPlayerId): PlayersById {
+  return getPlayersWithProgress(playersById, progressByPlayerId).reduce<PlayersById>((nextPlayersById, player) => {
+    nextPlayersById[getCanonicalPlayerId(player)] = player;
+    return nextPlayersById;
+  }, {});
+}
+
+function getRoundMeta(result: RoundResult): RoundMetaByRound[number] {
+  return {
+    matchId: result.matchId,
+    roundId: result.roundId,
+    roundNumber: result.roundNumber,
+    totalRounds: result.totalRounds,
+  };
+}
+
+function getRoundPlayersById(result: RoundResult, activePlayersById: PlayersById = {}) {
+  const activePlayerIds = new Set(Object.keys(activePlayersById));
+  const shouldFilterToActivePlayers = activePlayerIds.size > 0;
+
+  return dedupeRoundPlayers(result.players).reduce<Record<string, RoundPlayerResult>>((playersById, player) => {
+    if (!shouldFilterToActivePlayers || activePlayerIds.has(player.playerId)) {
+      playersById[player.playerId] = player;
+    }
+
+    return playersById;
+  }, {});
+}
+
+function mergeRoundPlayerResult(
+  currentPlayer: RoundPlayerResult | undefined,
+  nextPlayer: RoundPlayerResult,
+): RoundPlayerResult {
+  if (!currentPlayer) {
+    return nextPlayer;
+  }
+
+  if (nextPlayer.finished && !currentPlayer.finished) {
+    return nextPlayer;
+  }
+
+  if (
+    nextPlayer.finished === currentPlayer.finished &&
+    (nextPlayer.finishMs ?? Number.MAX_SAFE_INTEGER) < (currentPlayer.finishMs ?? Number.MAX_SAFE_INTEGER)
+  ) {
+    return nextPlayer;
+  }
+
+  return currentPlayer;
+}
+
+function mergeResultPlayersById(
+  currentPlayersById: Record<string, RoundPlayerResult> = {},
+  nextPlayersById: Record<string, RoundPlayerResult>,
+) {
+  return Object.entries(nextPlayersById).reduce<Record<string, RoundPlayerResult>>(
+    (playersById, [playerId, nextPlayer]) => {
+      playersById[playerId] = mergeRoundPlayerResult(playersById[playerId], nextPlayer);
+      return playersById;
+    },
+    { ...currentPlayersById },
+  );
+}
+
+function mergeResultsByRound(
+  current: ResultsByRound,
+  result: RoundResult,
+  activePlayersById: PlayersById,
+): ResultsByRound {
+  const roundNumber = getRoundResultKey(result);
+  const nextPlayersById = getRoundPlayersById(dedupeRoundResult(result), activePlayersById);
+
+  return {
+    ...current,
+    [roundNumber]: mergeResultPlayersById(current[roundNumber], nextPlayersById),
+  };
+}
+
+function getRoundResultFromMaps(
+  roundNumber: number,
+  resultsByRound: ResultsByRound,
+  winnersByRound: RoundWinnersByRound,
+  metaByRound: RoundMetaByRound,
+): RoundResult | null {
+  const winner = winnersByRound[roundNumber];
+  const meta = metaByRound[roundNumber];
+  const playersById = resultsByRound[roundNumber];
+
+  if (!winner || !meta || !playersById) {
+    return null;
+  }
+
+  return dedupeRoundResult({
+    ...meta,
+    winner,
+    players: Object.values(playersById),
+  });
+}
+
+function getRoundResultsFromMaps(
+  resultsByRound: ResultsByRound,
+  winnersByRound: RoundWinnersByRound,
+  metaByRound: RoundMetaByRound,
+) {
+  return Object.keys(resultsByRound)
+    .map((roundNumber) =>
+      getRoundResultFromMaps(Number(roundNumber), resultsByRound, winnersByRound, metaByRound),
+    )
+    .filter((result): result is RoundResult => Boolean(result))
+    .sort((first, second) => first.roundNumber - second.roundNumber);
+}
+
+function getResultsByRoundFromResults(results: RoundResult[], activePlayersById: PlayersById = {}) {
+  return dedupeRoundResults(results).reduce<{
+    resultsByRound: ResultsByRound;
+    winnersByRound: RoundWinnersByRound;
+    metaByRound: RoundMetaByRound;
+  }>(
+    (state, result) => {
+      const roundNumber = getRoundResultKey(result);
+
+      return {
+        resultsByRound: mergeResultsByRound(state.resultsByRound, result, activePlayersById),
+        winnersByRound: {
+          ...state.winnersByRound,
+          [roundNumber]: state.winnersByRound[roundNumber] ?? result.winner,
+        },
+        metaByRound: {
+          ...state.metaByRound,
+          [roundNumber]: state.metaByRound[roundNumber] ?? getRoundMeta(result),
+        },
+      };
+    },
+    { resultsByRound: {}, winnersByRound: {}, metaByRound: {} },
+  );
+}
+
+function getRoundResultWithActivePlayers(result: RoundResult, activePlayersById: PlayersById): RoundResult {
+  const activePlayers = Object.values(activePlayersById);
+  const cleanResult = dedupeRoundResult(result);
+  const resultPlayersById = getRoundPlayersById(cleanResult, activePlayersById);
+
+  return dedupeRoundResult({
+    ...cleanResult,
+    players: activePlayers.map((player) => {
+      const resultPlayer = resultPlayersById[player.playerId];
+
+      return (
+        resultPlayer ?? {
+          playerId: player.playerId,
+          displayName: player.displayName,
+          avatarId: player.avatarId,
+          avatar: player.avatar,
+          wpm: player.wpm,
+          accuracy: player.accuracy,
+          finished: player.finished,
+          finishMs: player.finishMs,
+        }
+      );
+    }),
+  });
+}
+
+function logResultsByRoundKeys(roomCode: string, channelName: string, resultsByRound: ResultsByRound) {
+  console.log('[type-race realtime] resultsByRound keys', {
+    roomCode,
+    channelName,
+    rounds: Object.fromEntries(
+      Object.entries(resultsByRound).map(([roundNumber, playersById]) => [roundNumber, Object.keys(playersById)]),
+    ),
+  });
+}
+
+function getPlayerProgress(player: PlayerRaceState): ProgressByPlayerId[string] {
+  return {
+    progress: player.progress,
+    wpm: player.wpm,
+    accuracy: player.accuracy,
+    finished: player.finished,
+    finishMs: player.finishMs,
+    lastSeen: player.lastSeen,
+  };
+}
+
+function getPlayersById(players: PlayerRaceState[], currentPlayersById: PlayersById = {}): PlayersById {
+  return dedupePlayers(players).reduce<PlayersById>((playersById, player) => {
+    const currentPlayer = currentPlayersById[player.playerId];
+
+    playersById[player.playerId] = {
+      ...player,
+      progress: currentPlayer?.progress ?? player.progress,
+      wpm: currentPlayer?.wpm ?? player.wpm,
+      accuracy: currentPlayer?.accuracy ?? player.accuracy,
+      finished: currentPlayer?.finished ?? player.finished,
+      finishMs: currentPlayer?.finishMs ?? player.finishMs,
+    };
+
+    return playersById;
+  }, {});
+}
+
+function mergePlayerById(playersById: PlayersById, player: PlayerRaceState): PlayersById {
+  const currentPlayer = playersById[player.playerId];
+
+  return {
+    ...playersById,
+    [player.playerId]: {
+      ...currentPlayer,
+      ...player,
+      lastSeen: Math.max(currentPlayer?.lastSeen ?? 0, player.lastSeen),
+    },
+  };
+}
+
 export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRaceRoomArgs) {
   const roomCode = normalizeRoomId(roomId);
   const channelName = getRoomChannelName(roomCode);
@@ -49,15 +311,31 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   const [totalRounds, setTotalRounds] = useState<RoundCount>(DEFAULT_ROUND_COUNT);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [sceneryId, setSceneryId] = useState(initialSceneryId ?? DEFAULT_SCENERY_ID);
-  const [winner, setWinner] = useState<RoundWinner | null>(null);
-  const [roundResult, setRoundResult] = useState<RoundResult | null>(null);
-  const [roundResults, setRoundResults] = useState<RoundResult[]>([]);
+  const [resultsByRound, setResultsByRound] = useState<ResultsByRound>({});
+  const [roundWinnersByRound, setRoundWinnersByRound] = useState<RoundWinnersByRound>({});
+  const [roundMetaByRound, setRoundMetaByRound] = useState<RoundMetaByRound>({});
   const [matchScores, setMatchScores] = useState<MatchScore[]>([]);
   const [matchWinner, setMatchWinner] = useState<MatchScore | null>(null);
-  const [players, setPlayers] = useState<PlayerRaceState[]>([]);
+  const [playersById, setPlayersById] = useState<PlayersById>({});
+  const [progressByPlayerId, setProgressByPlayerId] = useState<ProgressByPlayerId>({});
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(
     hasSupabaseConfig ? 'connecting' : canUseLocalDemoMode ? 'demo' : 'offline',
   );
+  const players = useMemo(() => getPlayersWithProgress(playersById, progressByPlayerId), [playersById, progressByPlayerId]);
+  const renderedPlayersById = useMemo(
+    () => getPlayersByIdWithProgress(playersById, progressByPlayerId),
+    [playersById, progressByPlayerId],
+  );
+  const roundResults = useMemo(
+    () => getRoundResultsFromMaps(resultsByRound, roundWinnersByRound, roundMetaByRound),
+    [resultsByRound, roundMetaByRound, roundWinnersByRound],
+  );
+  const roundResult = useMemo(
+    () => getRoundResultFromMaps(currentRound, resultsByRound, roundWinnersByRound, roundMetaByRound),
+    [currentRound, resultsByRound, roundMetaByRound, roundWinnersByRound],
+  );
+  const winner = roundResult?.winner ?? null;
+  const playerCount = useMemo(() => Object.keys(playersById).length, [playersById]);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const matchIdRef = useRef<string | null>(matchId);
@@ -65,11 +343,15 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   const currentRoundRef = useRef(currentRound);
   const totalRoundsRef = useRef(totalRounds);
   const sceneryIdRef = useRef(sceneryId);
-  const playersRef = useRef<PlayerRaceState[]>(players);
-  const roundResultsRef = useRef<RoundResult[]>(roundResults);
+  const playersByIdRef = useRef<PlayersById>(playersById);
+  const progressByPlayerIdRef = useRef<ProgressByPlayerId>(progressByPlayerId);
+  const resultsByRoundRef = useRef<ResultsByRound>(resultsByRound);
+  const roundWinnersByRoundRef = useRef<RoundWinnersByRound>(roundWinnersByRound);
+  const roundMetaByRoundRef = useRef<RoundMetaByRound>(roundMetaByRound);
   const myPlayerRef = useRef<PlayerRaceState | null>(null);
   const promptHistoryRef = useRef<string[]>([]);
   const finishSentForRoundRef = useRef<string | null>(null);
+  const connectionStatusRef = useRef<ConnectionStatus>(connectionStatus);
 
   useEffect(() => {
     matchIdRef.current = matchId;
@@ -92,25 +374,65 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   }, [sceneryId]);
 
   useEffect(() => {
-    playersRef.current = players;
-  }, [players]);
+    playersByIdRef.current = playersById;
+  }, [playersById]);
 
   useEffect(() => {
-    roundResultsRef.current = roundResults;
-  }, [roundResults]);
+    progressByPlayerIdRef.current = progressByPlayerId;
+  }, [progressByPlayerId]);
+
+  useEffect(() => {
+    resultsByRoundRef.current = resultsByRound;
+  }, [resultsByRound]);
+
+  useEffect(() => {
+    roundWinnersByRoundRef.current = roundWinnersByRound;
+  }, [roundWinnersByRound]);
+
+  useEffect(() => {
+    roundMetaByRoundRef.current = roundMetaByRound;
+  }, [roundMetaByRound]);
+
+  useEffect(() => {
+    connectionStatusRef.current = connectionStatus;
+  }, [connectionStatus]);
+
+  const setLoggedConnectionStatus = useCallback(
+    (nextStatus: ConnectionStatus, reason: string) => {
+      if (connectionStatusRef.current !== nextStatus) {
+        console.log('[type-race realtime] status change', {
+          roomCode,
+          channelName,
+          playerId: profile.id,
+          from: connectionStatusRef.current,
+          to: nextStatus,
+          reason,
+        });
+      }
+
+      connectionStatusRef.current = nextStatus;
+      setConnectionStatus(nextStatus);
+    },
+    [channelName, profile.id, roomCode],
+  );
 
   const makeMyPlayer = useCallback(
     (overrides: Partial<PlayerRaceState> = {}): PlayerRaceState => {
       const previous = myPlayerRef.current;
 
-      return {
+      const nextPlayer = {
         ...(previous ?? {}),
         progress: previous?.progress ?? 0,
         wpm: previous?.wpm ?? 0,
         accuracy: previous?.accuracy ?? 100,
         finished: previous?.finished ?? false,
+        sceneryId,
         totalRounds,
         ...overrides,
+      };
+
+      return {
+        ...nextPlayer,
         playerId: profile.id,
         displayName: profile.username,
         avatarId: profile.avatarId,
@@ -118,7 +440,6 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         favoriteSceneryId: profile.favoriteSceneryId,
         profileStats: profile.stats,
         isHost,
-        sceneryId,
         lastSeen: Date.now(),
       };
     },
@@ -135,20 +456,49 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     ],
   );
 
-  const updateMyPresence = useCallback(
+  const updateLocalPlayer = useCallback(
     (overrides: Partial<PlayerRaceState> = {}) => {
       const next = makeMyPlayer(overrides);
       myPlayerRef.current = next;
 
-      setPlayers((current) => sortPlayers([next, ...current.filter((player) => player.playerId !== profile.id)]));
+      setPlayersById((current) => mergePlayerById(current, next));
+      setProgressByPlayerId((current) => {
+        const nextProgressByPlayerId = {
+          ...current,
+          [next.playerId]: getPlayerProgress(next),
+        };
+
+        console.log('[type-race realtime] progressByPlayerId keys', {
+          roomCode,
+          channelName,
+          keys: Object.keys(nextProgressByPlayerId),
+        });
+
+        return nextProgressByPlayerId;
+      });
+
+      return next;
+    },
+    [channelName, makeMyPlayer, roomCode],
+  );
+
+  const updateMyPresence = useCallback(
+    (overrides: Partial<PlayerRaceState> = {}) => {
+      const next = updateLocalPlayer(overrides);
 
       if (channelRef.current) {
+        console.log('[type-race realtime] tracking presence', {
+          roomCode,
+          channelName,
+          playerId: next.playerId,
+          displayName: next.displayName,
+        });
         void channelRef.current.track(next);
       }
 
       return next;
     },
-    [makeMyPlayer, profile.id],
+    [channelName, roomCode, updateLocalPlayer],
   );
 
   const sendRoomEvent = useCallback(
@@ -209,12 +559,16 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         finished: true,
         finishMs: metrics.elapsedMs,
       });
-      const knownPlayers = sortPlayers([
-        currentPlayer,
-        ...playersRef.current.filter((player) => player.playerId !== currentPlayer.playerId),
-      ]);
+      const activePlayersById = getPlayersByIdWithProgress(
+        mergePlayerById(playersByIdRef.current, currentPlayer),
+        {
+          ...progressByPlayerIdRef.current,
+          [currentPlayer.playerId]: getPlayerProgress(currentPlayer),
+        },
+      );
+      const knownPlayers = sortPlayers(Object.values(activePlayersById));
 
-      return {
+      return dedupeRoundResult({
         matchId: matchIdRef.current ?? createMatchId(),
         roundId: roundIdRef.current ?? createRoundId(),
         roundNumber: currentRoundRef.current,
@@ -234,47 +588,72 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
             finishMs: isWinner ? roundWinner.finishMs : player.finishMs,
           };
         }),
-      };
+      });
     },
     [makeMyPlayer],
   );
 
   const applyRoundResult = useCallback((result: RoundResult) => {
-    setWinner(result.winner);
-    setRoundResult(result);
-    setPhase(result.roundNumber >= result.totalRounds ? 'match-results' : 'round-results');
+    const activePlayersById = playersByIdRef.current;
+    const cleanResult = getRoundResultWithActivePlayers(result, activePlayersById);
+    const roundNumber = getRoundResultKey(cleanResult);
 
-    setRoundResults((current) => {
-      const alreadySaved = current.some((savedResult) => savedResult.roundId === result.roundId);
-      const next = alreadySaved
-        ? current
-        : [...current, result].sort((first, second) => first.roundNumber - second.roundNumber);
-      const scores = buildMatchScores(next);
+    setRoundWinnersByRound((current) => ({
+      ...current,
+      [roundNumber]: current[roundNumber] ?? cleanResult.winner,
+    }));
+    setRoundMetaByRound((current) => ({
+      ...current,
+      [roundNumber]: current[roundNumber] ?? getRoundMeta(cleanResult),
+    }));
+    setPhase(cleanResult.roundNumber >= cleanResult.totalRounds ? 'match-results' : 'round-results');
 
+    setResultsByRound((current) => {
+      const next = mergeResultsByRound(current, cleanResult, activePlayersById);
+      const nextWinnersByRound = {
+        ...roundWinnersByRoundRef.current,
+        [roundNumber]: roundWinnersByRoundRef.current[roundNumber] ?? cleanResult.winner,
+      };
+      const nextMetaByRound = {
+        ...roundMetaByRoundRef.current,
+        [roundNumber]: roundMetaByRoundRef.current[roundNumber] ?? getRoundMeta(cleanResult),
+      };
+      const nextRoundResults = getRoundResultsFromMaps(next, nextWinnersByRound, nextMetaByRound);
+      const scores = buildMatchScores(nextRoundResults);
+
+      logResultsByRoundKeys(roomCode, channelName, next);
       setMatchScores(scores);
-      setMatchWinner(result.roundNumber >= result.totalRounds ? getMatchWinner(scores) : null);
+      setMatchWinner(cleanResult.roundNumber >= cleanResult.totalRounds ? getMatchWinner(scores) : null);
 
       return next;
     });
-  }, []);
+  }, [channelName, roomCode]);
 
   const applyMatchResults = useCallback((payload: MatchResultsPayload) => {
-    const finalRound = payload.roundResults[payload.roundResults.length - 1] ?? null;
+    const {
+      resultsByRound: nextResultsByRound,
+      winnersByRound: nextWinnersByRound,
+      metaByRound: nextMetaByRound,
+    } = getResultsByRoundFromResults(payload.roundResults, playersByIdRef.current);
+    const cleanRoundResults = getRoundResultsFromMaps(nextResultsByRound, nextWinnersByRound, nextMetaByRound);
+    const cleanScores = buildMatchScores(cleanRoundResults);
+    const finalRound = cleanRoundResults[cleanRoundResults.length - 1] ?? null;
 
-    setRoundResults(payload.roundResults);
-    setMatchScores(payload.scores);
-    setMatchWinner(payload.winner);
+    logResultsByRoundKeys(roomCode, channelName, nextResultsByRound);
+    setResultsByRound(nextResultsByRound);
+    setRoundWinnersByRound(nextWinnersByRound);
+    setRoundMetaByRound(nextMetaByRound);
+    setMatchScores(cleanScores);
+    setMatchWinner(getMatchWinner(cleanScores));
 
     if (finalRound) {
-      setWinner(finalRound.winner);
-      setRoundResult(finalRound);
       setCurrentRound(finalRound.roundNumber);
       setTotalRounds(finalRound.totalRounds);
     }
 
     setMatchId(payload.matchId);
     setPhase('match-results');
-  }, []);
+  }, [channelName, roomCode]);
 
   const beginRace = useCallback(
     (payload: RaceStartPayload) => {
@@ -287,14 +666,56 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       setPrompt(payload.prompt);
       setRoundId(payload.roundId);
       setStartedAt(payload.startedAt);
-      setWinner(null);
-      setRoundResult(null);
       setMatchWinner(null);
 
       if (payload.roundNumber === 1) {
-        setRoundResults([]);
+        setResultsByRound({});
+        setRoundWinnersByRound({});
+        setRoundMetaByRound({});
         setMatchScores([]);
       }
+
+      setPlayersById((current) =>
+        Object.fromEntries(
+          Object.entries(current).map(([playerId, player]) => [
+            playerId,
+            {
+              ...player,
+              progress: 0,
+              wpm: 0,
+              accuracy: 100,
+              finished: false,
+              finishMs: undefined,
+              totalRounds: payload.totalRounds,
+              sceneryId: payload.sceneryId,
+            },
+          ]),
+        ),
+      );
+      setProgressByPlayerId((current) => {
+        const nextProgressByPlayerId = Object.fromEntries(
+          Object.entries(current).map(([playerId, progress]) => [
+            playerId,
+            {
+              ...progress,
+              progress: 0,
+              wpm: 0,
+              accuracy: 100,
+              finished: false,
+              finishMs: undefined,
+              lastSeen: Date.now(),
+            },
+          ]),
+        ) as ProgressByPlayerId;
+
+        console.log('[type-race realtime] progressByPlayerId keys', {
+          roomCode,
+          channelName,
+          keys: Object.keys(nextProgressByPlayerId),
+        });
+
+        return nextProgressByPlayerId;
+      });
 
       setPhase('countdown');
       updateMyPresence({
@@ -307,7 +728,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         totalRounds: payload.totalRounds,
       });
     },
-    [roomId, updateMyPresence],
+    [channelName, roomCode, roomId, updateMyPresence],
   );
 
   useEffect(() => {
@@ -323,6 +744,27 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     return () => window.clearTimeout(timeoutId);
   }, [phase, startedAt]);
 
+  const updateMyPresenceRef = useRef(updateMyPresence);
+  const beginRaceRef = useRef(beginRace);
+  const applyRoundResultRef = useRef(applyRoundResult);
+  const applyMatchResultsRef = useRef(applyMatchResults);
+
+  useEffect(() => {
+    updateMyPresenceRef.current = updateMyPresence;
+  }, [updateMyPresence]);
+
+  useEffect(() => {
+    beginRaceRef.current = beginRace;
+  }, [beginRace]);
+
+  useEffect(() => {
+    applyRoundResultRef.current = applyRoundResult;
+  }, [applyRoundResult]);
+
+  useEffect(() => {
+    applyMatchResultsRef.current = applyMatchResults;
+  }, [applyMatchResults]);
+
   useEffect(() => {
     updateMyPresence();
   }, [updateMyPresence]);
@@ -334,20 +776,33 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         channelName,
         canUseLocalDemoMode,
       });
-      setConnectionStatus(canUseLocalDemoMode ? 'demo' : 'offline');
+      setLoggedConnectionStatus(canUseLocalDemoMode ? 'demo' : 'offline', 'missing Supabase config');
 
       if (canUseLocalDemoMode) {
-        updateMyPresence();
+        updateMyPresenceRef.current();
       } else {
-        setPlayers([]);
+        setPlayersById({});
+        setProgressByPlayerId({});
       }
 
       return undefined;
     }
 
-    setConnectionStatus('connecting');
+    setLoggedConnectionStatus('connecting', 'creating room channel');
 
-    console.log('[type-race realtime] joining room channel', {
+    if (channelRef.current) {
+      console.warn('[type-race realtime] removing existing room channel before subscribing', {
+        roomCode,
+        channelName,
+        playerId: profile.id,
+      });
+      const previousChannel = channelRef.current;
+      channelRef.current = null;
+      void previousChannel.untrack();
+      void supabase.removeChannel(previousChannel);
+    }
+
+    console.log('[type-race realtime] subscribe requested', {
       roomCode,
       channelName,
       playerId: profile.id,
@@ -366,14 +821,32 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState() as Record<string, PlayerRaceState[]>;
-        const nextPlayers = Object.values(state).flat();
+        const presencePlayers = Object.values(state)
+          .flat()
+          .filter((player): player is PlayerRaceState => Boolean(player?.playerId));
+        const nextPlayers = sortPlayers(dedupePlayers(presencePlayers));
         console.log('[type-race realtime] presence sync', {
           roomCode,
           channelName,
-          playerCount: nextPlayers.length,
-          players: nextPlayers.map((player) => player.displayName),
+          rawPresenceMetasCount: presencePlayers.length,
+          uniquePlayerCount: nextPlayers.length,
+          players: nextPlayers.map((player) => `${player.displayName} (${player.playerId})`),
         });
-        setPlayers(sortPlayers(nextPlayers));
+        setPlayersById((current) => getPlayersById(nextPlayers, current));
+        setProgressByPlayerId((current) => {
+          const nextProgressByPlayerId = nextPlayers.reduce<ProgressByPlayerId>((progressById, player) => {
+            progressById[player.playerId] = current[player.playerId] ?? getPlayerProgress(player);
+            return progressById;
+          }, {});
+
+          console.log('[type-race realtime] progressByPlayerId keys', {
+            roomCode,
+            channelName,
+            keys: Object.keys(nextProgressByPlayerId),
+          });
+
+          return nextProgressByPlayerId;
+        });
 
         const hostPlayer = nextPlayers.find((player) => player.isHost && player.sceneryId);
 
@@ -408,19 +881,31 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           channelName,
           payload,
         });
-        beginRace(payload as RaceStartPayload);
+        beginRaceRef.current(payload as RaceStartPayload);
       })
       .on('broadcast', { event: 'player-progress' }, ({ payload }) => {
         const nextPlayer = (payload as PlayerProgressPayload).player;
+        const playerId = getCanonicalPlayerId(nextPlayer);
         console.log('[type-race realtime] progress event received', {
           roomCode,
           channelName,
-          playerId: nextPlayer.playerId,
+          playerId,
           progress: nextPlayer.progress,
         });
-        setPlayers((current) =>
-          sortPlayers([nextPlayer, ...current.filter((player) => player.playerId !== nextPlayer.playerId)]),
-        );
+        setProgressByPlayerId((current) => {
+          const nextProgressByPlayerId = {
+            ...current,
+            [playerId]: getPlayerProgress(nextPlayer),
+          };
+
+          console.log('[type-race realtime] progressByPlayerId keys', {
+            roomCode,
+            channelName,
+            keys: Object.keys(nextProgressByPlayerId),
+          });
+
+          return nextProgressByPlayerId;
+        });
       })
       .on('broadcast', { event: 'match-config' }, ({ payload }) => {
         console.log('[type-race realtime] match config event received', {
@@ -430,7 +915,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         });
         const nextTotalRounds = (payload as MatchConfigPayload).totalRounds;
         setTotalRounds(nextTotalRounds);
-        updateMyPresence({ totalRounds: nextTotalRounds });
+        updateMyPresenceRef.current({ totalRounds: nextTotalRounds });
       })
       .on('broadcast', { event: 'scenery-change' }, ({ payload }) => {
         console.log('[type-race realtime] scenery event received', {
@@ -441,7 +926,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         const nextScenery = (payload as SceneryChangePayload).sceneryId;
         setSceneryId(nextScenery);
         saveRoomScenery(roomId, nextScenery);
-        updateMyPresence({ sceneryId: nextScenery });
+        updateMyPresenceRef.current({ sceneryId: nextScenery });
       })
       .on('broadcast', { event: 'race-finish' }, ({ payload }) => {
         console.log('[type-race realtime] race finish event received', {
@@ -449,7 +934,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           channelName,
           payload,
         });
-        applyRoundResult((payload as RaceFinishPayload).result);
+        applyRoundResultRef.current((payload as RaceFinishPayload).result);
       })
       .on('broadcast', { event: 'match-results' }, ({ payload }) => {
         console.log('[type-race realtime] match results event received', {
@@ -457,9 +942,18 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           channelName,
           payload,
         });
-        applyMatchResults(payload as MatchResultsPayload);
+        applyMatchResultsRef.current(payload as MatchResultsPayload);
       })
       .subscribe((status) => {
+        if (channelRef.current !== channel) {
+          console.log('[type-race realtime] ignored stale subscription status', {
+            roomCode,
+            channelName,
+            status,
+          });
+          return;
+        }
+
         console.log('[type-race realtime] subscription status', {
           roomCode,
           channelName,
@@ -467,37 +961,55 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         });
 
         if (status === 'SUBSCRIBED') {
-          setConnectionStatus('online');
-          updateMyPresence();
+          setLoggedConnectionStatus('online', 'channel subscribed');
+          updateMyPresenceRef.current();
           return;
         }
 
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          setConnectionStatus('offline');
+          setLoggedConnectionStatus('offline', `channel status ${status}`);
         }
       });
 
     return () => {
-      console.log('[type-race realtime] leaving room channel', {
+      console.log('[type-race realtime] unsubscribe requested', {
         roomCode,
         channelName,
         playerId: profile.id,
       });
+
+      if (channelRef.current === channel) {
+        channelRef.current = null;
+      }
+
       void channel.untrack();
-      void client.removeChannel(channel);
-      channelRef.current = null;
+      void client
+        .removeChannel(channel)
+        .then((response) => {
+          console.log('[type-race realtime] unsubscribe complete', {
+            roomCode,
+            channelName,
+            playerId: profile.id,
+            response,
+          });
+        })
+        .catch((error: unknown) => {
+          console.error('[type-race realtime] unsubscribe failed', {
+            roomCode,
+            channelName,
+            playerId: profile.id,
+            error,
+          });
+        });
     };
   }, [
-    applyRoundResult,
-    applyMatchResults,
-    beginRace,
     canUseLocalDemoMode,
     channelName,
     isHost,
     profile.id,
     roomCode,
     roomId,
-    updateMyPresence,
+    setLoggedConnectionStatus,
   ]);
 
   const changeScenery = useCallback(
@@ -580,12 +1092,28 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       const currentRoundId = roundIdRef.current;
       const currentMatchId = matchIdRef.current;
 
-      const nextPlayer = updateMyPresence({
+      const nextPlayer = makeMyPlayer({
         progress: metrics.progress,
         wpm: metrics.wpm,
         accuracy: metrics.accuracy,
         finished: metrics.finished,
         finishMs: metrics.finished ? metrics.elapsedMs : undefined,
+      });
+      myPlayerRef.current = nextPlayer;
+
+      setProgressByPlayerId((current) => {
+        const nextProgressByPlayerId = {
+          ...current,
+          [nextPlayer.playerId]: getPlayerProgress(nextPlayer),
+        };
+
+        console.log('[type-race realtime] progressByPlayerId keys', {
+          roomCode,
+          channelName,
+          keys: Object.keys(nextProgressByPlayerId),
+        });
+
+        return nextProgressByPlayerId;
       });
 
       if (channelRef.current) {
@@ -626,10 +1154,24 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         sendRoomEvent('race-finish', payload);
 
         if (result.roundNumber >= result.totalRounds) {
-          const finalRoundResults = [
-            ...roundResultsRef.current.filter((savedResult) => savedResult.roundId !== result.roundId),
+          const finalResultsByRound = mergeResultsByRound(
+            resultsByRoundRef.current,
             result,
-          ].sort((first, second) => first.roundNumber - second.roundNumber);
+            playersByIdRef.current,
+          );
+          const finalWinnersByRound = {
+            ...roundWinnersByRoundRef.current,
+            [result.roundNumber]: roundWinnersByRoundRef.current[result.roundNumber] ?? result.winner,
+          };
+          const finalMetaByRound = {
+            ...roundMetaByRoundRef.current,
+            [result.roundNumber]: roundMetaByRoundRef.current[result.roundNumber] ?? getRoundMeta(result),
+          };
+          const finalRoundResults = getRoundResultsFromMaps(
+            finalResultsByRound,
+            finalWinnersByRound,
+            finalMetaByRound,
+          );
           const finalScores = buildMatchScores(finalRoundResults);
           const matchResultsPayload: MatchResultsPayload = {
             matchId: currentMatchId,
@@ -643,7 +1185,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         }
       }
     },
-    [applyRoundResult, createRoundResult, profile.id, profile.username, sendRoomEvent, updateMyPresence],
+    [applyRoundResult, channelName, createRoundResult, makeMyPlayer, profile.id, profile.username, roomCode, sendRoomEvent],
   );
 
   return {
@@ -661,6 +1203,12 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     matchScores,
     matchWinner,
     players,
+    playersById: renderedPlayersById,
+    progressByPlayerId,
+    resultsByRound,
+    roundWinnersByRound,
+    currentRoundResultsByPlayerId: resultsByRound[currentRound] ?? {},
+    playerCount,
     sceneryId,
     startMatch,
     nextRound,

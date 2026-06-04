@@ -1,14 +1,25 @@
+import { useEffect, useMemo } from 'react';
 import type { PlayerRaceState } from '../../features/race/raceTypes';
+import { sortPlayers } from '../../features/race/raceUtils';
 import { PixelAvatar } from '../profile/PixelAvatar';
 
 type RaceTrackProps = {
-  players: PlayerRaceState[];
+  playersById: Record<string, PlayerRaceState>;
 };
 
-export function RaceTrack({ players }: RaceTrackProps) {
+export function RaceTrack({ playersById }: RaceTrackProps) {
+  const visiblePlayers = useMemo(() => sortPlayers(Object.values(playersById)), [playersById]);
+  const renderedPlayerIds = visiblePlayers.map((player) => player.playerId).join(',');
+
+  useEffect(() => {
+    console.log('[type-race render] RaceTrack rendered playerIds', {
+      playerIds: renderedPlayerIds ? renderedPlayerIds.split(',') : [],
+    });
+  }, [renderedPlayerIds]);
+
   return (
     <section className="race-track" aria-label="Live race progress">
-      {players.map((player) => (
+      {visiblePlayers.map((player) => (
         <div className="race-lane" key={player.playerId}>
           <span className="race-lane__name">{player.displayName}</span>
           <div className="race-lane__road">
