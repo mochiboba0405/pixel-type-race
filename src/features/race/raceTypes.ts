@@ -35,6 +35,19 @@ export type RaceStartPayload = {
   sceneryId: string;
 };
 
+export type NextRoundPayload = {
+  matchId: string;
+  roundNumber: number;
+  totalRounds: RoundCount;
+};
+
+export type ResetRoundProgressPayload = {
+  matchId: string;
+  roundId: string;
+  roundNumber: number;
+  totalRounds: RoundCount;
+};
+
 export type MatchConfigPayload = {
   totalRounds: RoundCount;
 };

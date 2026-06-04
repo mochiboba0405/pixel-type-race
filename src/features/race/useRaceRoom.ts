@@ -23,11 +23,13 @@ import type {
   MatchConfigPayload,
   MatchResultsPayload,
   MatchScore,
+  NextRoundPayload,
   PlayerProgressPayload,
   PlayerRaceState,
   RaceFinishPayload,
   RacePhase,
   RaceStartPayload,
+  ResetRoundProgressPayload,
   RoundCount,
   RoundPlayerResult,
   RoundResult,
@@ -303,6 +305,7 @@ function mergePlayerById(playersById: PlayersById, player: PlayerRaceState): Pla
 export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRaceRoomArgs) {
   const roomCode = normalizeRoomId(roomId);
   const channelName = getRoomChannelName(roomCode);
+  const channelKey = `${channelName}:${profile.id}`;
   const [phase, setPhase] = useState<RacePhase>('lobby');
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
   const [matchId, setMatchId] = useState<string | null>(null);
@@ -338,6 +341,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   const playerCount = useMemo(() => Object.keys(playersById).length, [playersById]);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const activeChannelKeyRef = useRef<string | null>(null);
   const matchIdRef = useRef<string | null>(matchId);
   const roundIdRef = useRef<string | null>(roundId);
   const currentRoundRef = useRef(currentRound);
@@ -351,7 +355,10 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   const myPlayerRef = useRef<PlayerRaceState | null>(null);
   const promptHistoryRef = useRef<string[]>([]);
   const finishSentForRoundRef = useRef<string | null>(null);
+  const lastProgressBroadcastAtRef = useRef(0);
   const connectionStatusRef = useRef<ConnectionStatus>(connectionStatus);
+  const isHostRef = useRef(isHost);
+  const roomIdRef = useRef(roomId);
 
   useEffect(() => {
     matchIdRef.current = matchId;
@@ -397,6 +404,14 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     connectionStatusRef.current = connectionStatus;
   }, [connectionStatus]);
 
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
+
+  useEffect(() => {
+    roomIdRef.current = roomId;
+  }, [roomId]);
+
   const setLoggedConnectionStatus = useCallback(
     (nextStatus: ConnectionStatus, reason: string) => {
       if (connectionStatusRef.current !== nextStatus) {
@@ -414,6 +429,75 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       setConnectionStatus(nextStatus);
     },
     [channelName, profile.id, roomCode],
+  );
+
+  const logActiveChannelStatus = useCallback(
+    (label: string) => {
+      console.log('[type-race realtime] active channel status', {
+        roomCode,
+        channelName,
+        channelKey,
+        activeChannelKey: activeChannelKeyRef.current,
+        hasActiveChannel: Boolean(channelRef.current),
+        connectionStatus: connectionStatusRef.current,
+        label,
+      });
+    },
+    [channelKey, channelName, roomCode],
+  );
+
+  const resetRoundProgress = useCallback(
+    (payload: ResetRoundProgressPayload) => {
+      console.log('[type-race realtime] reset_round_progress applied', {
+        roomCode,
+        channelName,
+        currentRoundBefore: currentRoundRef.current,
+        currentRoundAfter: payload.roundNumber,
+        payload,
+      });
+
+      setPlayersById((current) =>
+        Object.fromEntries(
+          Object.entries(current).map(([playerId, player]) => [
+            playerId,
+            {
+              ...player,
+              progress: 0,
+              wpm: 0,
+              accuracy: 100,
+              finished: false,
+              finishMs: undefined,
+              totalRounds: payload.totalRounds,
+            },
+          ]),
+        ),
+      );
+      setProgressByPlayerId((current) => {
+        const nextProgressByPlayerId = Object.fromEntries(
+          Object.entries(current).map(([playerId, progress]) => [
+            playerId,
+            {
+              ...progress,
+              progress: 0,
+              wpm: 0,
+              accuracy: 100,
+              finished: false,
+              finishMs: undefined,
+              lastSeen: Date.now(),
+            },
+          ]),
+        ) as ProgressByPlayerId;
+
+        console.log('[type-race realtime] progressByPlayerId keys', {
+          roomCode,
+          channelName,
+          keys: Object.keys(nextProgressByPlayerId),
+        });
+
+        return nextProgressByPlayerId;
+      });
+    },
+    [channelName, roomCode],
   );
 
   const makeMyPlayer = useCallback(
@@ -516,6 +600,12 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       }
 
       console.log('[type-race realtime] sending event', {
+        roomCode,
+        channelName,
+        event,
+        payload,
+      });
+      console.log(`[type-race realtime] broadcast sent: ${event}`, {
         roomCode,
         channelName,
         event,
@@ -657,6 +747,13 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
 
   const beginRace = useCallback(
     (payload: RaceStartPayload) => {
+      console.log('[type-race realtime] start_round applying', {
+        roomCode,
+        channelName,
+        currentRoundBefore: currentRoundRef.current,
+        currentRoundAfter: payload.roundNumber,
+        payload,
+      });
       finishSentForRoundRef.current = null;
       setMatchId(payload.matchId);
       setCurrentRound(payload.roundNumber);
@@ -675,47 +772,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         setMatchScores([]);
       }
 
-      setPlayersById((current) =>
-        Object.fromEntries(
-          Object.entries(current).map(([playerId, player]) => [
-            playerId,
-            {
-              ...player,
-              progress: 0,
-              wpm: 0,
-              accuracy: 100,
-              finished: false,
-              finishMs: undefined,
-              totalRounds: payload.totalRounds,
-              sceneryId: payload.sceneryId,
-            },
-          ]),
-        ),
-      );
-      setProgressByPlayerId((current) => {
-        const nextProgressByPlayerId = Object.fromEntries(
-          Object.entries(current).map(([playerId, progress]) => [
-            playerId,
-            {
-              ...progress,
-              progress: 0,
-              wpm: 0,
-              accuracy: 100,
-              finished: false,
-              finishMs: undefined,
-              lastSeen: Date.now(),
-            },
-          ]),
-        ) as ProgressByPlayerId;
-
-        console.log('[type-race realtime] progressByPlayerId keys', {
-          roomCode,
-          channelName,
-          keys: Object.keys(nextProgressByPlayerId),
-        });
-
-        return nextProgressByPlayerId;
-      });
+      resetRoundProgress(payload);
 
       setPhase('countdown');
       updateMyPresence({
@@ -727,8 +784,9 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         sceneryId: payload.sceneryId,
         totalRounds: payload.totalRounds,
       });
+      logActiveChannelStatus('after start_round applied');
     },
-    [channelName, roomCode, roomId, updateMyPresence],
+    [channelName, logActiveChannelStatus, resetRoundProgress, roomCode, roomId, updateMyPresence],
   );
 
   useEffect(() => {
@@ -746,8 +804,10 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
 
   const updateMyPresenceRef = useRef(updateMyPresence);
   const beginRaceRef = useRef(beginRace);
+  const resetRoundProgressRef = useRef(resetRoundProgress);
   const applyRoundResultRef = useRef(applyRoundResult);
   const applyMatchResultsRef = useRef(applyMatchResults);
+  const logActiveChannelStatusRef = useRef(logActiveChannelStatus);
 
   useEffect(() => {
     updateMyPresenceRef.current = updateMyPresence;
@@ -758,12 +818,20 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   }, [beginRace]);
 
   useEffect(() => {
+    resetRoundProgressRef.current = resetRoundProgress;
+  }, [resetRoundProgress]);
+
+  useEffect(() => {
     applyRoundResultRef.current = applyRoundResult;
   }, [applyRoundResult]);
 
   useEffect(() => {
     applyMatchResultsRef.current = applyMatchResults;
   }, [applyMatchResults]);
+
+  useEffect(() => {
+    logActiveChannelStatusRef.current = logActiveChannelStatus;
+  }, [logActiveChannelStatus]);
 
   useEffect(() => {
     updateMyPresence();
@@ -790,14 +858,27 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
 
     setLoggedConnectionStatus('connecting', 'creating room channel');
 
+    if (channelRef.current && activeChannelKeyRef.current === channelKey) {
+      console.warn('[type-race realtime] active room channel already exists, skipping duplicate subscribe', {
+        roomCode,
+        channelName,
+        channelKey,
+      });
+      logActiveChannelStatusRef.current('duplicate subscribe skipped');
+      return undefined;
+    }
+
     if (channelRef.current) {
       console.warn('[type-race realtime] removing existing room channel before subscribing', {
         roomCode,
         channelName,
         playerId: profile.id,
+        previousChannelKey: activeChannelKeyRef.current,
+        nextChannelKey: channelKey,
       });
       const previousChannel = channelRef.current;
       channelRef.current = null;
+      activeChannelKeyRef.current = null;
       void previousChannel.untrack();
       void supabase.removeChannel(previousChannel);
     }
@@ -805,6 +886,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     console.log('[type-race realtime] subscribe requested', {
       roomCode,
       channelName,
+      channelKey,
       playerId: profile.id,
       isHost,
     });
@@ -817,6 +899,8 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       },
     });
     channelRef.current = channel;
+    activeChannelKeyRef.current = channelKey;
+    logActiveChannelStatusRef.current('channel created');
 
     channel
       .on('presence', { event: 'sync' }, () => {
@@ -876,9 +960,45 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         });
       })
       .on('broadcast', { event: 'race-start' }, ({ payload }) => {
-        console.log('[type-race realtime] race start event received', {
+        console.log('[type-race realtime] broadcast received: race-start', {
           roomCode,
           channelName,
+          currentRoundBefore: currentRoundRef.current,
+          currentRoundAfter: (payload as RaceStartPayload).roundNumber,
+          payload,
+        });
+        beginRaceRef.current(payload as RaceStartPayload);
+      })
+      .on('broadcast', { event: 'next_round' }, ({ payload }) => {
+        const nextPayload = payload as NextRoundPayload;
+        console.log('[type-race realtime] broadcast received: next_round', {
+          roomCode,
+          channelName,
+          currentRoundBefore: currentRoundRef.current,
+          currentRoundAfter: nextPayload.roundNumber,
+          payload,
+        });
+        setMatchId(nextPayload.matchId);
+        setCurrentRound(nextPayload.roundNumber);
+        setTotalRounds(nextPayload.totalRounds);
+        logActiveChannelStatusRef.current('after next_round received');
+      })
+      .on('broadcast', { event: 'reset_round_progress' }, ({ payload }) => {
+        console.log('[type-race realtime] broadcast received: reset_round_progress', {
+          roomCode,
+          channelName,
+          currentRoundBefore: currentRoundRef.current,
+          currentRoundAfter: (payload as ResetRoundProgressPayload).roundNumber,
+          payload,
+        });
+        resetRoundProgressRef.current(payload as ResetRoundProgressPayload);
+      })
+      .on('broadcast', { event: 'start_round' }, ({ payload }) => {
+        console.log('[type-race realtime] broadcast received: start_round', {
+          roomCode,
+          channelName,
+          currentRoundBefore: currentRoundRef.current,
+          currentRoundAfter: (payload as RaceStartPayload).roundNumber,
           payload,
         });
         beginRaceRef.current(payload as RaceStartPayload);
@@ -937,7 +1057,15 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         applyRoundResultRef.current((payload as RaceFinishPayload).result);
       })
       .on('broadcast', { event: 'match-results' }, ({ payload }) => {
-        console.log('[type-race realtime] match results event received', {
+        console.log('[type-race realtime] broadcast received: match-results', {
+          roomCode,
+          channelName,
+          payload,
+        });
+        applyMatchResultsRef.current(payload as MatchResultsPayload);
+      })
+      .on('broadcast', { event: 'match_complete' }, ({ payload }) => {
+        console.log('[type-race realtime] broadcast received: match_complete', {
           roomCode,
           channelName,
           payload,
@@ -945,10 +1073,12 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         applyMatchResultsRef.current(payload as MatchResultsPayload);
       })
       .subscribe((status) => {
-        if (channelRef.current !== channel) {
+        if (channelRef.current !== channel || activeChannelKeyRef.current !== channelKey) {
           console.log('[type-race realtime] ignored stale subscription status', {
             roomCode,
             channelName,
+            channelKey,
+            activeChannelKey: activeChannelKeyRef.current,
             status,
           });
           return;
@@ -957,8 +1087,11 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         console.log('[type-race realtime] subscription status', {
           roomCode,
           channelName,
+          channelKey,
+          activeChannelKey: activeChannelKeyRef.current,
           status,
         });
+        logActiveChannelStatusRef.current(`subscription status ${status}`);
 
         if (status === 'SUBSCRIBED') {
           setLoggedConnectionStatus('online', 'channel subscribed');
@@ -975,11 +1108,13 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       console.log('[type-race realtime] unsubscribe requested', {
         roomCode,
         channelName,
+        channelKey,
         playerId: profile.id,
       });
 
       if (channelRef.current === channel) {
         channelRef.current = null;
+        activeChannelKeyRef.current = null;
       }
 
       void channel.untrack();
@@ -989,6 +1124,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           console.log('[type-race realtime] unsubscribe complete', {
             roomCode,
             channelName,
+            channelKey,
             playerId: profile.id,
             response,
           });
@@ -997,19 +1133,14 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           console.error('[type-race realtime] unsubscribe failed', {
             roomCode,
             channelName,
+            channelKey,
             playerId: profile.id,
             error,
           });
         });
     };
   }, [
-    canUseLocalDemoMode,
-    channelName,
-    isHost,
-    profile.id,
-    roomCode,
-    roomId,
-    setLoggedConnectionStatus,
+    channelKey,
   ]);
 
   const changeScenery = useCallback(
@@ -1058,9 +1189,26 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         matchId: payload.matchId,
         roundNumber: payload.roundNumber,
         totalRounds: payload.totalRounds,
+        currentRoundBefore: currentRoundRef.current,
+        currentRoundAfter: payload.roundNumber,
       });
 
-      const sentThroughRealtime = sendRoomEvent('race-start', payload);
+      if (roundNumber > 1) {
+        sendRoomEvent('next_round', {
+          matchId: nextMatchId,
+          roundNumber,
+          totalRounds: nextTotalRounds,
+        } satisfies NextRoundPayload);
+      }
+
+      sendRoomEvent('reset_round_progress', {
+        matchId: nextMatchId,
+        roundId: payload.roundId,
+        roundNumber,
+        totalRounds: nextTotalRounds,
+      } satisfies ResetRoundProgressPayload);
+
+      const sentThroughRealtime = sendRoomEvent('start_round', payload);
 
       if (!sentThroughRealtime) {
         beginRace(payload);
@@ -1116,7 +1264,11 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         return nextProgressByPlayerId;
       });
 
-      if (channelRef.current) {
+      const now = Date.now();
+      const shouldBroadcastProgress = metrics.finished || now - lastProgressBroadcastAtRef.current >= 200;
+
+      if (channelRef.current && shouldBroadcastProgress) {
+        lastProgressBroadcastAtRef.current = now;
         sendRoomEvent('player-progress', { player: nextPlayer } satisfies PlayerProgressPayload);
       }
 
@@ -1181,7 +1333,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
             winner: getMatchWinner(finalScores),
           };
 
-          sendRoomEvent('match-results', matchResultsPayload);
+          sendRoomEvent('match_complete', matchResultsPayload);
         }
       }
     },
