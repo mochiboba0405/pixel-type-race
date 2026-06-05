@@ -1,36 +1,46 @@
+import { getPromptDisplayTokens } from '../../features/race/typingAlignment';
+
 type TypingPromptProps = {
   prompt: string;
   typed: string;
 };
 
 export function TypingPrompt({ prompt, typed }: TypingPromptProps) {
-  const extraTyped = typed.slice(prompt.length);
+  const displayTokens = getPromptDisplayTokens(prompt, typed);
 
   return (
     <div className="typing-prompt" aria-label="Typing prompt">
-      {prompt.split('').map((character, index) => {
-        const typedCharacter = typed[index];
-        const isCurrent = index === typed.length;
-        const className =
-          typedCharacter === undefined
-            ? isCurrent
-              ? 'typing-prompt__char typing-prompt__char--current'
-              : 'typing-prompt__char'
-            : typedCharacter === character
-              ? 'typing-prompt__char typing-prompt__char--correct'
-              : 'typing-prompt__char typing-prompt__char--wrong';
-
-        return (
-          <span className={className} key={`${character}-${index}`}>
-            {character === ' ' ? '\u00A0' : character}
-          </span>
-        );
-      })}
-      {extraTyped.split('').map((character, index) => (
-        <span className="typing-prompt__char typing-prompt__char--extra" key={`extra-${character}-${index}`}>
-          {character === ' ' ? '\u00A0' : character}
+      {displayTokens.map((token, index) => (
+        <span className={getTokenClassName(token.kind)} key={`${token.kind}-${token.promptIndex}-${token.typedIndex}-${index}`}>
+          {token.char}
         </span>
       ))}
     </div>
   );
+}
+
+function getTokenClassName(kind: ReturnType<typeof getPromptDisplayTokens>[number]['kind']) {
+  const classNames = ['typing-prompt__char'];
+
+  if (kind === 'correct') {
+    classNames.push('typing-prompt__char--correct');
+  }
+
+  if (kind === 'wrong') {
+    classNames.push('typing-prompt__char--wrong');
+  }
+
+  if (kind === 'missing') {
+    classNames.push('typing-prompt__char--wrong', 'typing-prompt__char--missing');
+  }
+
+  if (kind === 'extra') {
+    classNames.push('typing-prompt__char--extra');
+  }
+
+  if (kind === 'current') {
+    classNames.push('typing-prompt__char--current');
+  }
+
+  return classNames.join(' ');
 }

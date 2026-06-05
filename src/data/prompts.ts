@@ -38,6 +38,8 @@ const mediumPrompts = [
   'Tiny street lamps guide each player toward the glowing finish line.',
   'A quiet city hums below as every word becomes another step forward.',
   'Starry parks, soft clouds, and steady hands make the race feel magical.',
+  'The lobby grows lively as new friends join the room, choose cozy avatars, and wait for the countdown together.',
+  'Careful racers keep typing through mistakes, watch the prompt wrap neatly, and finish the round with a calm smile.',
 ];
 
 const hardPrompts = [
@@ -51,6 +53,8 @@ const hardPrompts = [
   'Bright buses, 8-bit billboards, and midnight rain made the city feel wonderfully impossible.',
   'Typing "co-op victory" is easy; typing it under pressure, with punctuation, is another quest.',
   'The final prompt included 3 numbers, 2 quotes, 1 comma, and a surprisingly sneaky capital Q.',
+  'At exactly 10:18 p.m., the host selected Hard mode, whispered "steady hands," and sent everyone a long, punctuation-heavy challenge.',
+  'The neon scoreboard compared 58 WPM, 96% accuracy, 2 finish times, and one hyper-focused supercalifragilistic typing streak.',
 ];
 
 const easySubjects = ['little racers', 'pixel pals', 'tiny heroes', 'neon friends', 'sleepy typists'];

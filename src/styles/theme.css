@@ -49,7 +49,8 @@
 
 .room-grid {
   display: grid;
-  grid-template-columns: minmax(250px, 320px) minmax(520px, 1fr) minmax(270px, 340px);
+  grid-template-areas: "left main right";
+  grid-template-columns: minmax(230px, 300px) minmax(0, 1fr) minmax(260px, 320px);
   gap: 16px;
   align-items: start;
 }
@@ -57,6 +58,7 @@
 .room-left-sidebar,
 .room-right-sidebar {
   display: grid;
+  min-width: 0;
   align-content: start;
   gap: 12px;
 }
@@ -65,15 +67,18 @@
 .room-right-sidebar {
   position: sticky;
   top: 16px;
+  align-self: start;
   max-height: calc(100vh - 32px);
 }
 
 .room-left-sidebar {
+  grid-area: left;
   overflow: auto;
   padding-right: 2px;
 }
 
 .room-right-sidebar {
+  grid-area: right;
   grid-template-rows: auto auto minmax(260px, 1fr);
   min-height: min(720px, calc(100vh - 32px));
 }
@@ -97,7 +102,11 @@
 }
 
 .race-panel {
+  grid-area: main;
+  width: 100%;
+  min-width: 0;
   min-height: 0;
+  overflow: visible;
   padding: 18px;
 }
 
@@ -581,7 +590,20 @@
 .active-race,
 .finished-race {
   display: grid;
+  min-width: 0;
   gap: 14px;
+}
+
+.race-panel .race-track,
+.race-panel .host-controls,
+.race-panel .typing-prompt,
+.race-panel .typing-input,
+.race-panel .stats-bar,
+.race-panel .race-lane,
+.race-panel .race-lane__road,
+.winner-screen,
+.results-table {
+  min-width: 0;
 }
 
 .countdown-state {
@@ -621,6 +643,12 @@
 }
 
 .typing-prompt {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  word-break: break-word;
   border: 1px solid rgba(125, 211, 252, 0.24);
   border-radius: 8px;
   background:
@@ -878,22 +906,31 @@
   min-height: 40px;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1040px) {
   .page-shell__content {
     width: min(100% - 24px, 1080px);
   }
 
   .room-grid {
-    grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+    grid-template-areas:
+      "left"
+      "main"
+      "right";
+    grid-template-columns: 1fr;
+  }
+
+  .room-left-sidebar,
+  .room-right-sidebar {
+    position: static;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .room-right-sidebar {
-    position: static;
-    grid-column: 1 / -1;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     grid-template-rows: none;
-    max-height: none;
-    min-height: 0;
   }
 
   .room-right-sidebar .player-list,
