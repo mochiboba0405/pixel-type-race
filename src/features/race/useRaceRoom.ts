@@ -19,6 +19,7 @@ import {
   getRandomPrompt,
   sortPlayers,
 } from './raceUtils';
+import { scoreRoundPlayers, selectRoundWinner } from './raceScoring';
 import type {
   ConnectionStatus,
   ChatMessage,
@@ -53,7 +54,20 @@ type UseRaceRoomArgs = {
 type PlayersById = Record<string, PlayerRaceState>;
 type ProgressByPlayerId = Record<
   string,
-  Pick<PlayerRaceState, 'progress' | 'wpm' | 'accuracy' | 'finished' | 'finishMs' | 'lastSeen'>
+  Pick<
+    PlayerRaceState,
+    | 'progress'
+    | 'wpm'
+    | 'accuracy'
+    | 'finished'
+    | 'finishMs'
+    | 'accuracyPenaltyMs'
+    | 'adjustedFinishMs'
+    | 'spamDetected'
+    | 'disqualified'
+    | 'disqualificationReason'
+    | 'lastSeen'
+  >
 >;
 type ResultsByRound = Record<number, Record<string, RoundPlayerResult>>;
 type RoundWinnersByRound = Record<number, RoundWinner>;
@@ -83,6 +97,11 @@ function getProgressPlayer(player: PlayerRaceState, progress?: ProgressByPlayerI
     accuracy: progress?.accuracy ?? player.accuracy,
     finished: progress?.finished ?? player.finished,
     finishMs: progress?.finishMs ?? player.finishMs,
+    accuracyPenaltyMs: progress?.accuracyPenaltyMs ?? player.accuracyPenaltyMs ?? 0,
+    adjustedFinishMs: progress?.adjustedFinishMs ?? player.adjustedFinishMs,
+    spamDetected: progress?.spamDetected ?? player.spamDetected ?? false,
+    disqualified: progress?.disqualified ?? player.disqualified ?? false,
+    disqualificationReason: progress?.disqualificationReason ?? player.disqualificationReason,
     lastSeen: Math.max(player.lastSeen, progress?.lastSeen ?? 0),
   };
 }
@@ -161,26 +180,7 @@ function getRoundWinnerFromPlayers(
   playersById: Record<string, RoundPlayerResult>,
   fallbackWinner: RoundWinner,
 ): RoundWinner {
-  const winner = Object.values(playersById).sort(
-    (first, second) =>
-      Number(second.finished) - Number(first.finished) ||
-      second.accuracy - first.accuracy ||
-      second.wpm - first.wpm ||
-      (first.finishMs ?? Number.MAX_SAFE_INTEGER) - (second.finishMs ?? Number.MAX_SAFE_INTEGER) ||
-      first.displayName.localeCompare(second.displayName),
-  )[0];
-
-  if (!winner) {
-    return fallbackWinner;
-  }
-
-  return {
-    playerId: winner.playerId,
-    displayName: winner.displayName,
-    wpm: winner.wpm,
-    accuracy: winner.accuracy,
-    finishMs: winner.finishMs ?? fallbackWinner.finishMs,
-  };
+  return selectRoundWinner(Object.values(playersById), fallbackWinner);
 }
 
 function mergeResultsByRound(
@@ -195,6 +195,16 @@ function mergeResultsByRound(
     ...current,
     [roundNumber]: mergeResultPlayersById(current[roundNumber], nextPlayersById),
   };
+}
+
+function isRoundComplete(playersById: Record<string, RoundPlayerResult> = {}, activePlayersById: PlayersById) {
+  const activePlayerIds = Object.keys(activePlayersById);
+
+  if (activePlayerIds.length === 0) {
+    return false;
+  }
+
+  return activePlayerIds.every((playerId) => playersById[playerId]?.finished);
 }
 
 function getRoundResultFromMaps(
@@ -214,7 +224,7 @@ function getRoundResultFromMaps(
   return dedupeRoundResult({
     ...meta,
     winner,
-    players: Object.values(playersById),
+    players: scoreRoundPlayers(Object.values(playersById)),
   });
 }
 
@@ -277,6 +287,11 @@ function getRoundResultWithActivePlayers(result: RoundResult, activePlayersById:
           accuracy: player.accuracy,
           finished: player.finished,
           finishMs: player.finishMs,
+          accuracyPenaltyMs: player.accuracyPenaltyMs ?? 0,
+          adjustedFinishMs: player.adjustedFinishMs,
+          spamDetected: player.spamDetected ?? false,
+          disqualified: player.disqualified ?? false,
+          disqualificationReason: player.disqualificationReason,
         }
       );
     }),
@@ -314,6 +329,11 @@ function getPlayerProgress(player: PlayerRaceState): ProgressByPlayerId[string] 
     accuracy: player.accuracy,
     finished: player.finished,
     finishMs: player.finishMs,
+    accuracyPenaltyMs: player.accuracyPenaltyMs ?? 0,
+    adjustedFinishMs: player.adjustedFinishMs,
+    spamDetected: player.spamDetected ?? false,
+    disqualified: player.disqualified ?? false,
+    disqualificationReason: player.disqualificationReason,
     lastSeen: player.lastSeen,
   };
 }
@@ -329,6 +349,11 @@ function getPlayersById(players: PlayerRaceState[], currentPlayersById: PlayersB
       accuracy: currentPlayer?.accuracy ?? player.accuracy,
       finished: currentPlayer?.finished ?? player.finished,
       finishMs: currentPlayer?.finishMs ?? player.finishMs,
+      accuracyPenaltyMs: currentPlayer?.accuracyPenaltyMs ?? player.accuracyPenaltyMs ?? 0,
+      adjustedFinishMs: currentPlayer?.adjustedFinishMs ?? player.adjustedFinishMs,
+      spamDetected: currentPlayer?.spamDetected ?? player.spamDetected ?? false,
+      disqualified: currentPlayer?.disqualified ?? player.disqualified ?? false,
+      disqualificationReason: currentPlayer?.disqualificationReason ?? player.disqualificationReason,
     };
 
     return playersById;
@@ -404,6 +429,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
   const myPlayerRef = useRef<PlayerRaceState | null>(null);
   const promptHistoryRef = useRef<string[]>([]);
   const finishSentForRoundRef = useRef<string | null>(null);
+  const matchCompleteSentForMatchRef = useRef<string | null>(null);
   const lastProgressBroadcastAtRef = useRef(0);
   const connectionStatusRef = useRef<ConnectionStatus>(connectionStatus);
   const isHostRef = useRef(isHost);
@@ -520,6 +546,11 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
               accuracy: 100,
               finished: false,
               finishMs: undefined,
+              accuracyPenaltyMs: 0,
+              adjustedFinishMs: undefined,
+              spamDetected: false,
+              disqualified: false,
+              disqualificationReason: undefined,
               lastSeen: Date.now(),
             },
           ]),
@@ -547,6 +578,11 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         wpm: previous?.wpm ?? 0,
         accuracy: previous?.accuracy ?? 100,
         finished: previous?.finished ?? false,
+        accuracyPenaltyMs: previous?.accuracyPenaltyMs ?? 0,
+        adjustedFinishMs: previous?.adjustedFinishMs,
+        spamDetected: previous?.spamDetected ?? false,
+        disqualified: previous?.disqualified ?? false,
+        disqualificationReason: previous?.disqualificationReason,
         sceneryId,
         totalRounds,
         ...overrides,
@@ -685,6 +721,11 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         accuracy: metrics.accuracy,
         finished: true,
         finishMs: metrics.elapsedMs,
+        accuracyPenaltyMs: metrics.accuracyPenaltyMs,
+        adjustedFinishMs: metrics.adjustedElapsedMs,
+        spamDetected: metrics.spamDetected,
+        disqualified: metrics.disqualified,
+        disqualificationReason: metrics.disqualificationReason,
       });
       const activePlayersById = getPlayersByIdWithProgress(
         mergePlayerById(playersByIdRef.current, currentPlayer),
@@ -713,6 +754,11 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
             accuracy: isWinner ? roundWinner.accuracy : player.accuracy,
             finished: isWinner || player.finished,
             finishMs: isWinner ? roundWinner.finishMs : player.finishMs,
+            accuracyPenaltyMs: isWinner ? roundWinner.accuracyPenaltyMs : player.accuracyPenaltyMs ?? 0,
+            adjustedFinishMs: isWinner ? roundWinner.adjustedFinishMs : player.adjustedFinishMs,
+            spamDetected: player.spamDetected ?? false,
+            disqualified: player.disqualified ?? false,
+            disqualificationReason: player.disqualificationReason,
           };
         }),
       });
@@ -728,10 +774,10 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       ...current,
       [roundNumber]: current[roundNumber] ?? getRoundMeta(cleanResult),
     }));
-    setPhase(cleanResult.roundNumber >= cleanResult.totalRounds ? 'match-results' : 'round-results');
 
     setResultsByRound((current) => {
       const next = mergeResultsByRound(current, cleanResult, activePlayersById);
+      const roundComplete = isRoundComplete(next[roundNumber], activePlayersById);
       const nextWinner = getRoundWinnerFromPlayers(next[roundNumber] ?? {}, cleanResult.winner);
       const nextWinnersByRound = {
         ...roundWinnersByRoundRef.current,
@@ -747,11 +793,34 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       logResultsByRoundKeys(roomCode, channelName, next);
       setRoundWinnersByRound(nextWinnersByRound);
       setMatchScores(scores);
-      setMatchWinner(cleanResult.roundNumber >= cleanResult.totalRounds ? getMatchWinner(scores) : null);
+
+      if (roundComplete) {
+        const isFinalRound = cleanResult.roundNumber >= cleanResult.totalRounds;
+        const nextMatchWinner = isFinalRound ? getMatchWinner(scores) : null;
+
+        setPhase(isFinalRound ? 'match-results' : 'round-results');
+        setMatchWinner(nextMatchWinner);
+
+        if (
+          isFinalRound &&
+          isHostRef.current &&
+          channelRef.current &&
+          matchCompleteSentForMatchRef.current !== cleanResult.matchId
+        ) {
+          matchCompleteSentForMatchRef.current = cleanResult.matchId;
+          sendRoomEvent('match_complete', {
+            matchId: cleanResult.matchId,
+            totalRounds: cleanResult.totalRounds,
+            roundResults: nextRoundResults,
+            scores,
+            winner: nextMatchWinner,
+          } satisfies MatchResultsPayload);
+        }
+      }
 
       return next;
     });
-  }, [channelName, roomCode]);
+  }, [channelName, roomCode, sendRoomEvent]);
 
   const applyMatchResults = useCallback((payload: MatchResultsPayload) => {
     const {
@@ -805,6 +874,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       setMatchWinner(null);
 
       if (payload.roundNumber === 1) {
+        matchCompleteSentForMatchRef.current = null;
         setResultsByRound({});
         setRoundWinnersByRound({});
         setRoundMetaByRound({});
@@ -1406,12 +1476,22 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       const currentRoundId = roundIdRef.current;
       const currentMatchId = matchIdRef.current;
 
+      if (currentRoundId && finishSentForRoundRef.current === currentRoundId) {
+        return;
+      }
+
+      const roundTerminalForMe = metrics.finished || metrics.disqualified;
       const nextPlayer = makeMyPlayer({
         progress: metrics.progress,
         wpm: metrics.wpm,
         accuracy: metrics.accuracy,
-        finished: metrics.finished,
-        finishMs: metrics.finished ? metrics.elapsedMs : undefined,
+        finished: roundTerminalForMe,
+        finishMs: roundTerminalForMe ? metrics.elapsedMs : undefined,
+        accuracyPenaltyMs: metrics.accuracyPenaltyMs,
+        adjustedFinishMs: roundTerminalForMe ? metrics.adjustedElapsedMs : undefined,
+        spamDetected: metrics.spamDetected,
+        disqualified: metrics.disqualified,
+        disqualificationReason: metrics.disqualificationReason,
       });
       myPlayerRef.current = nextPlayer;
 
@@ -1431,7 +1511,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       });
 
       const now = Date.now();
-      const shouldBroadcastProgress = metrics.finished || now - lastProgressBroadcastAtRef.current >= 200;
+      const shouldBroadcastProgress = roundTerminalForMe || now - lastProgressBroadcastAtRef.current >= 200;
 
       if (channelRef.current && shouldBroadcastProgress) {
         lastProgressBroadcastAtRef.current = now;
@@ -1439,7 +1519,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
       }
 
       if (
-        !metrics.finished ||
+        !roundTerminalForMe ||
         !currentRoundId ||
         !currentMatchId ||
         finishSentForRoundRef.current === currentRoundId
@@ -1455,6 +1535,8 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         wpm: metrics.wpm,
         accuracy: metrics.accuracy,
         finishMs: metrics.elapsedMs,
+        accuracyPenaltyMs: metrics.accuracyPenaltyMs,
+        adjustedFinishMs: metrics.adjustedElapsedMs,
       };
       const result = createRoundResult(roundWinner, metrics);
       const payload: RaceFinishPayload = {
@@ -1470,40 +1552,6 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
 
       if (channelRef.current) {
         sendRoomEvent('race-finish', payload);
-
-        if (result.roundNumber >= result.totalRounds) {
-          const finalResultsByRound = mergeResultsByRound(
-            resultsByRoundRef.current,
-            result,
-            playersByIdRef.current,
-          );
-          const finalWinnersByRound = {
-            ...roundWinnersByRoundRef.current,
-            [result.roundNumber]: getRoundWinnerFromPlayers(
-              finalResultsByRound[result.roundNumber] ?? {},
-              result.winner,
-            ),
-          };
-          const finalMetaByRound = {
-            ...roundMetaByRoundRef.current,
-            [result.roundNumber]: roundMetaByRoundRef.current[result.roundNumber] ?? getRoundMeta(result),
-          };
-          const finalRoundResults = getRoundResultsFromMaps(
-            finalResultsByRound,
-            finalWinnersByRound,
-            finalMetaByRound,
-          );
-          const finalScores = buildMatchScores(finalRoundResults);
-          const matchResultsPayload: MatchResultsPayload = {
-            matchId: currentMatchId,
-            totalRounds: result.totalRounds,
-            roundResults: finalRoundResults,
-            scores: finalScores,
-            winner: getMatchWinner(finalScores),
-          };
-
-          sendRoomEvent('match_complete', matchResultsPayload);
-        }
       }
     },
     [applyRoundResult, channelName, createRoundResult, makeMyPlayer, profile.id, profile.username, roomCode, sendRoomEvent],

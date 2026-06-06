@@ -31,7 +31,9 @@ export function RaceTrack({ playersById }: RaceTrackProps) {
             </div>
             <span className="race-lane__finish" />
           </div>
-          <span className="race-lane__stat">{Math.round(player.progress * 100)}%</span>
+          <span className={player.disqualified ? 'race-lane__stat race-lane__stat--dq' : 'race-lane__stat'}>
+            {player.disqualified ? 'DQ' : `${Math.round(player.progress * 100)}%`}
+          </span>
         </div>
       ))}
     </section>

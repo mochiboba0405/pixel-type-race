@@ -10,6 +10,7 @@ import { MatchResultsScreen } from '../components/race/MatchResultsScreen';
 import { MatchScoreboard } from '../components/race/MatchScoreboard';
 import { RaceTrack } from '../components/race/RaceTrack';
 import { RoundResultsScreen } from '../components/race/RoundResultsScreen';
+import { ScoringRules } from '../components/race/ScoringRules';
 import { StatsBar } from '../components/race/StatsBar';
 import { TypingInput } from '../components/race/TypingInput';
 import { TypingPrompt } from '../components/race/TypingPrompt';
@@ -19,6 +20,7 @@ import { difficultyLabels } from '../data/prompts';
 import { useLocalProfile } from '../features/profile/useLocalProfile';
 import { isRoomHost, loadRoomScenery } from '../features/room/roomUtils';
 import { useRaceRoom } from '../features/race/useRaceRoom';
+import { LIVE_DQ_WARNING } from '../features/race/raceScoring';
 import { calculateTypingMetrics } from '../features/race/typingMetrics';
 import type { PlayerRaceState } from '../features/race/raceTypes';
 
@@ -101,7 +103,18 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
   ]);
 
   const countdown = race.startedAt ? Math.max(0, Math.ceil((race.startedAt - Date.now()) / 1000)) : 0;
-  const inputDisabled = race.phase !== 'racing';
+  const inputDisabled = race.phase !== 'racing' || Boolean(me?.finished) || metrics.disqualified;
+  const disqualificationMessage = me?.disqualified
+    ? me.disqualificationReason
+    : metrics.disqualified
+      ? metrics.disqualificationReason
+      : undefined;
+  const warningMessage =
+    disqualificationMessage ??
+    (metrics.liveDqWarning ? LIVE_DQ_WARNING : undefined) ??
+    (metrics.spamDetected || (metrics.typedLength >= 8 && metrics.accuracy < 80)
+      ? 'Slow down — accuracy matters!'
+      : undefined);
   const scenery = getSceneryTheme(race.sceneryId);
   const canEditScenery = host && race.phase === 'lobby';
   const roundLabel = `Round ${race.currentRound} of ${race.totalRounds}`;
@@ -150,6 +163,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
               <p className="muted">The host controls the shared scenery.</p>
             )}
           </section>
+          <ScoringRules />
         </aside>
 
         <section className="race-panel">
@@ -188,6 +202,11 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
               </div>
               <RaceTrack playersById={race.playersById} />
               <StatsBar metrics={metrics} />
+              {warningMessage ? (
+                <div className="spam-warning" role="alert">
+                  {warningMessage}
+                </div>
+              ) : null}
               <TypingPrompt prompt={race.prompt} typed={typed} />
               <TypingInput value={typed} disabled={inputDisabled} onChange={setTyped} />
             </div>

@@ -24,6 +24,11 @@ export type PlayerRaceState = {
   accuracy: number;
   finished: boolean;
   finishMs?: number;
+  accuracyPenaltyMs: number;
+  adjustedFinishMs?: number;
+  spamDetected: boolean;
+  disqualified: boolean;
+  disqualificationReason?: string;
   lastSeen: number;
 };
 
@@ -88,6 +93,8 @@ export type RoundWinner = {
   wpm: number;
   accuracy: number;
   finishMs: number;
+  accuracyPenaltyMs: number;
+  adjustedFinishMs: number;
 };
 
 export type RoundPlayerResult = {
@@ -99,6 +106,11 @@ export type RoundPlayerResult = {
   accuracy: number;
   finished: boolean;
   finishMs?: number;
+  accuracyPenaltyMs: number;
+  adjustedFinishMs?: number;
+  spamDetected: boolean;
+  disqualified: boolean;
+  disqualificationReason?: string;
 };
 
 export type RoundResult = {
@@ -141,6 +153,8 @@ export type MatchScore = {
 };
 
 export type TypingMetrics = {
+  typedLength: number;
+  promptLength: number;
   correctChars: number;
   correctPrefix: number;
   incorrectChars: number;
@@ -149,6 +163,13 @@ export type TypingMetrics = {
   progress: number;
   wpm: number;
   accuracy: number;
+  accuracyPenaltyMs: number;
+  adjustedElapsedMs: number;
+  spamDetected: boolean;
+  liveDqWarning: boolean;
+  liveDqThresholdReached: boolean;
+  disqualified: boolean;
+  disqualificationReason?: string;
   elapsedMs: number;
   finished: boolean;
 };

@@ -575,6 +575,11 @@
   text-align: right;
 }
 
+.race-lane__stat--dq {
+  color: #fecaca;
+  text-shadow: 0 0 12px rgba(248, 113, 113, 0.55);
+}
+
 .race-lane__road {
   position: relative;
   height: 58px;

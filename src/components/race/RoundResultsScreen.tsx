@@ -18,6 +18,8 @@ export function RoundResultsScreen({
 }: RoundResultsScreenProps) {
   const players = dedupeRoundPlayers(Object.values(resultsByPlayerId));
   const winningPlayer = resultsByPlayerId[winner.playerId];
+  const winnerAdjustedFinishMs = winner.adjustedFinishMs ?? winner.finishMs;
+  const winnerPenaltyMs = winner.accuracyPenaltyMs ?? 0;
 
   return (
     <section className="winner-screen">
@@ -28,7 +30,8 @@ export function RoundResultsScreen({
         </p>
         <h2>{winner.displayName}</h2>
         <p>
-          {winner.wpm} WPM, {winner.accuracy}% accuracy, {formatDuration(winner.finishMs)}
+          {winner.wpm} WPM, {winner.accuracy}% accuracy, {formatDuration(winnerAdjustedFinishMs)}
+          {winnerPenaltyMs > 0 ? ` adjusted (+${winnerPenaltyMs / 1000}s)` : ''}
         </p>
       </div>
 
@@ -37,7 +40,13 @@ export function RoundResultsScreen({
           <article className="result-row result-row--wide" key={player.playerId}>
             <div>
               <strong>{player.displayName}</strong>
-              <span>{player.playerId === winner.playerId ? 'Round winner' : 'Round result'}</span>
+              <span>
+                {player.disqualified
+                  ? 'Disqualified'
+                  : player.playerId === winner.playerId
+                    ? 'Round winner'
+                    : 'Round result'}
+              </span>
             </div>
             <div>
               <strong>{player.wpm}</strong>
@@ -48,12 +57,30 @@ export function RoundResultsScreen({
               <span>Acc.</span>
             </div>
             <div>
-              <strong>{player.finishMs === undefined ? 'DNF' : formatDuration(player.finishMs)}</strong>
-              <span>Time</span>
+              <strong>
+                {player.disqualified
+                  ? 'DQ'
+                  : player.finishMs === undefined
+                    ? 'DNF'
+                    : formatDuration(player.adjustedFinishMs ?? player.finishMs)}
+              </strong>
+              <span>{getResultTimeLabel(player)}</span>
             </div>
           </article>
         ))}
       </div>
     </section>
   );
+}
+
+function getResultTimeLabel(player: RoundPlayerResult) {
+  if (player.disqualified) {
+    return player.disqualificationReason ?? 'Disqualified';
+  }
+
+  if ((player.accuracyPenaltyMs ?? 0) > 0) {
+    return `+${(player.accuracyPenaltyMs ?? 0) / 1000}s penalty`;
+  }
+
+  return 'Time';
 }

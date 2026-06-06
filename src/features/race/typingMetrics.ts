@@ -5,6 +5,14 @@ import {
   getAlignmentCounts,
   getEditDistance,
 } from './typingAlignment';
+import {
+  detectTypingSpam,
+  getAccuracyPenaltyMs,
+  hasReachedLiveDqTypedThreshold,
+  isLiveAccuracyDisqualified,
+  LIVE_DQ_REASON,
+  shouldWarnBeforeLiveDq,
+} from './raceScoring';
 
 export function countCorrectChars(prompt: string, typed: string) {
   return getAlignmentCounts(alignTypedToPromptPrefix(prompt, typed).tokens).matches;
@@ -48,8 +56,15 @@ export function calculateTypingMetrics(prompt: string, typed: string, startedAt:
   const wpm = Math.round(typed.length / 5 / elapsedMinutes);
   const accuracy =
     typed.length === 0 ? 100 : Math.max(0, Math.round(((comparedLength - editDistance) / comparedLength) * 100));
+  const accuracyPenaltyMs = getAccuracyPenaltyMs(accuracy);
+  const spamDetected = detectTypingSpam({ typed, prompt, accuracy });
+  const liveDqThresholdReached = hasReachedLiveDqTypedThreshold(typed.length, prompt.length);
+  const liveDqWarning = shouldWarnBeforeLiveDq(accuracy, typed.length, prompt.length);
+  const disqualified = isLiveAccuracyDisqualified(accuracy, typed.length, prompt.length);
 
   return {
+    typedLength: typed.length,
+    promptLength: prompt.length,
     correctChars,
     correctPrefix,
     incorrectChars,
@@ -58,6 +73,13 @@ export function calculateTypingMetrics(prompt: string, typed: string, startedAt:
     progress,
     wpm,
     accuracy,
+    accuracyPenaltyMs,
+    adjustedElapsedMs: elapsedMs + accuracyPenaltyMs,
+    spamDetected,
+    liveDqWarning,
+    liveDqThresholdReached,
+    disqualified,
+    disqualificationReason: disqualified ? LIVE_DQ_REASON : undefined,
     elapsedMs,
     finished,
   };

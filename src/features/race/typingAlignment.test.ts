@@ -47,4 +47,21 @@ assert(getEditDistance('ready, set.', 'ready. set.') === 1, 'wrong punctuation s
 assertKinds('Keys', 'keys', ['wrong', 'correct', 'correct', 'correct']);
 assert(getEditDistance('Keys', 'keys') === 1, 'capitalization mistake should have edit distance 1');
 
+{
+  const earlyMetrics = calculateTypingMetrics('steady notes guide the room', 'x', Date.now() - 1000);
+
+  assert(!earlyMetrics.disqualified, 'one early mistake should not mark typing metrics as DQ');
+  assert(earlyMetrics.liveDqWarning, 'one early low-accuracy mistake should show a warning');
+}
+
+{
+  const metrics = calculateTypingMetrics('steady notes guide the room', 'xxxxxxxxxxxxxxx', Date.now() - 1000);
+
+  assert(metrics.disqualified, 'live accuracy below 75% should mark typing metrics as DQ');
+  assert(
+    metrics.disqualificationReason === 'Disqualified this round — accuracy dropped below 75%.',
+    'live DQ metrics should include the player-facing reason',
+  );
+}
+
 console.log('typing alignment tests passed');

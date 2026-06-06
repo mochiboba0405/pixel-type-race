@@ -1,4 +1,4 @@
-import { createGeneratedPrompt, DEFAULT_DIFFICULTY, getPromptPool } from '../../data/prompts';
+import { DEFAULT_DIFFICULTY, getPromptPool } from '../../data/prompts';
 import type { MatchScore, PromptDifficulty, RoundCount, RoundPlayerResult, RoundResult } from './raceTypes';
 
 export const DEFAULT_PROMPT = getPromptPool(DEFAULT_DIFFICULTY)[0];
@@ -8,12 +8,9 @@ export const ROUND_COUNT_OPTIONS = [1, 3, 5, 7, 10] as const;
 export function getRandomPrompt(difficulty: PromptDifficulty, excludedPrompts: string[] = []) {
   const prompts = getPromptPool(difficulty);
   const unusedPrompts = prompts.filter((prompt) => !excludedPrompts.includes(prompt));
+  const promptPool = unusedPrompts.length > 0 ? unusedPrompts : prompts;
 
-  if (unusedPrompts.length > 0) {
-    return unusedPrompts[Math.floor(Math.random() * unusedPrompts.length)];
-  }
-
-  return createGeneratedPrompt(difficulty);
+  return promptPool[Math.floor(Math.random() * promptPool.length)];
 }
 
 export function createRoundId() {
@@ -28,9 +25,13 @@ export function buildMatchScores(results: RoundResult[]): MatchScore[] {
   const scoreMap = new Map<string, MatchScore>();
 
   for (const result of dedupeRoundResults(results)) {
+    const winnerResult = result.players.find((player) => player.playerId === result.winner.playerId);
+    const winnerCanScore = Boolean(winnerResult && !winnerResult.disqualified);
+
     for (const player of result.players) {
       const previous = scoreMap.get(player.playerId);
-      const roundWins = (previous?.roundWins ?? 0) + (result.winner.playerId === player.playerId ? 1 : 0);
+      const roundWins =
+        (previous?.roundWins ?? 0) + (winnerCanScore && result.winner.playerId === player.playerId ? 1 : 0);
       const roundsPlayed = (previous?.roundsPlayed ?? 0) + 1;
       const totalWpm = (previous?.totalWpm ?? 0) + player.wpm;
       const totalAccuracy = (previous?.totalAccuracy ?? 0) + player.accuracy;
