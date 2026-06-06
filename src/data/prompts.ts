@@ -1,5 +1,37 @@
 import type { PromptDifficulty } from '../features/race/raceTypes';
 
+export type PromptTopic =
+  | 'everyday'
+  | 'travel'
+  | 'food'
+  | 'animals'
+  | 'science'
+  | 'technology'
+  | 'history'
+  | 'hobbies'
+  | 'nature'
+  | 'sports'
+  | 'facts'
+  | 'storytelling'
+  | 'observations'
+  | 'workplace'
+  | 'school'
+  | 'fictional';
+
+export type PromptEntry = {
+  text: string;
+  topic: PromptTopic;
+};
+
+type TopicBank = {
+  topic: PromptTopic;
+  actors: string[];
+  actions: string[];
+  items: string[];
+  places: string[];
+  details: string[];
+};
+
 export const DEFAULT_DIFFICULTY: PromptDifficulty = 'medium';
 
 export const difficultyLabels: Record<PromptDifficulty, string> = {
@@ -18,303 +50,311 @@ export const difficultyStatusLabels: Record<PromptDifficulty, string> = {
 
 export const difficultyOptions: PromptDifficulty[] = ['easy', 'medium', 'hard', 'demon'];
 
-const easySeedPrompts = [
-  'warm lights glow on the street',
-  'kind friends share fresh tea',
-  'soft music fills the room',
-  'blue trains roll past shops',
-  'small stars shine above town',
-  'calm hands make neat notes',
-  'fresh bread waits on the table',
-  'bright signs light the road',
-  'quiet rain taps the window',
-  'happy teams help each other',
-  'paper kites drift over hills',
-  'cozy rooms feel safe and warm',
+const promptTopics: TopicBank[] = [
+  {
+    topic: 'everyday',
+    actors: ['a busy neighbor', 'the morning bus', 'a quiet shopper', 'the hallway light', 'a careful cook', 'the mail carrier'],
+    actions: ['carries', 'sorts', 'wipes', 'checks', 'folds', 'shares'],
+    items: ['fresh laundry', 'paper bags', 'clean dishes', 'a small note', 'warm towels', 'a grocery list'],
+    places: ['the front step', 'the kitchen sink', 'a corner store', 'the apartment lobby', 'the laundry room', 'a sunny window'],
+    details: ['the kettle sings softly', 'a timer blinks twice', 'the floor smells like soap', 'the door closes gently', 'a pencil rolls away', 'the clock gains a minute'],
+  },
+  {
+    topic: 'travel',
+    actors: ['a weekend traveler', 'the station guide', 'a map reader', 'the airport clerk', 'a train conductor', 'a backpacker'],
+    actions: ['follows', 'packs', 'checks', 'marks', 'crosses', 'studies'],
+    items: ['a paper ticket', 'the blue route', 'a small suitcase', 'a city map', 'a hotel key', 'a ferry pass'],
+    places: ['the rail platform', 'a quiet terminal', 'the harbor gate', 'a mountain road', 'the hostel desk', 'a narrow bridge'],
+    details: ['the departure board changes', 'clouds cover the runway', 'the suitcase wheel squeaks', 'a passport stamp dries', 'the guidebook loses a page', 'the taxi meter resets'],
+  },
+  {
+    topic: 'food',
+    actors: ['a bakery owner', 'the lunch crew', 'a soup maker', 'a market vendor', 'the night chef', 'a picnic planner'],
+    actions: ['stirs', 'slices', 'serves', 'tastes', 'wraps', 'labels'],
+    items: ['tomato soup', 'fresh noodles', 'lemon rice', 'warm bread', 'green salad', 'apple pie'],
+    places: ['a cafe table', 'the pantry shelf', 'a street cart', 'the breakfast counter', 'a picnic blanket', 'the spice drawer'],
+    details: ['steam curls over the bowl', 'the recipe card bends', 'a spoon taps the glass', 'the oven light glows', 'salt lands on the counter', 'the menu gets rewritten'],
+  },
+  {
+    topic: 'animals',
+    actors: ['a calm zookeeper', 'the rescue volunteer', 'a bird watcher', 'a marine biologist', 'the farmhand', 'a pet sitter'],
+    actions: ['feeds', 'observes', 'tracks', 'counts', 'guides', 'brushes'],
+    items: ['sleepy pandas', 'bright parrots', 'harbor seals', 'gentle horses', 'tiny kittens', 'busy ants'],
+    places: ['the shaded habitat', 'a quiet stable', 'the tide pool', 'a garden path', 'the adoption room', 'a forest hideout'],
+    details: ['a tail flicks once', 'feathers shine after rain', 'paw prints cross the dust', 'the water ripples slowly', 'a collar tag jingles', 'the nest sits high'],
+  },
+  {
+    topic: 'science',
+    actors: ['a lab assistant', 'the astronomy club', 'a geology student', 'the weather team', 'a chemistry teacher', 'the microscope operator'],
+    actions: ['measures', 'records', 'compares', 'tests', 'labels', 'calculates'],
+    items: ['moon phases', 'crystal samples', 'rainfall totals', 'seed growth', 'clear beakers', 'magnetic fields'],
+    places: ['the school lab', 'a rooftop observatory', 'the river bank', 'a clean workbench', 'the greenhouse shelf', 'the planetarium dome'],
+    details: ['the sample changes color', 'a graph slopes upward', 'the lens needs cleaning', 'one reading looks unusual', 'the timer reaches zero', 'the notebook fills quickly'],
+  },
+  {
+    topic: 'technology',
+    actors: ['a patient coder', 'the support desk', 'a robotics team', 'the app designer', 'a network admin', 'the hardware tester'],
+    actions: ['debugs', 'updates', 'connects', 'reviews', 'backs up', 'calibrates'],
+    items: ['a login screen', 'new firmware', 'a tiny sensor', 'the server log', 'a broken cable', 'a dashboard widget'],
+    places: ['the computer lab', 'a quiet office', 'the server room', 'a maker space', 'the help desk', 'a test bench'],
+    details: ['the cursor blinks steadily', 'the fan spins faster', 'an error code appears', 'the battery reaches full', 'the cable clicks in', 'the graph refreshes'],
+  },
+  {
+    topic: 'history',
+    actors: ['a museum guide', 'the archive clerk', 'a history student', 'the city historian', 'a map conservator', 'the tour group'],
+    actions: ['studies', 'restores', 'dates', 'compares', 'catalogs', 'explains'],
+    items: ['old letters', 'stone bridges', 'ancient coins', 'a faded map', 'railway posters', 'family records'],
+    places: ['the west gallery', 'a reading room', 'the town square', 'a stone courtyard', 'the archive basement', 'a restored station'],
+    details: ['ink fades at the edge', 'the plaque lists three names', 'dust glows in sunlight', 'a date is hard to read', 'the frame hangs level', 'the guide lowers their voice'],
+  },
+  {
+    topic: 'hobbies',
+    actors: ['a weekend painter', 'the chess club', 'a guitar student', 'the knitting circle', 'a model builder', 'the dance class'],
+    actions: ['practices', 'sketches', 'tunes', 'assembles', 'trades', 'collects'],
+    items: ['watercolor clouds', 'silver strings', 'wooden pieces', 'soft yarn', 'paper stamps', 'tiny model parts'],
+    places: ['the art table', 'a music room', 'the hobby shelf', 'a community hall', 'the craft fair', 'a sunny porch'],
+    details: ['paint dries too quickly', 'a chord rings clearly', 'the pattern repeats neatly', 'glue sets overnight', 'the final move surprises everyone', 'a ribbon wins second place'],
+  },
+  {
+    topic: 'nature',
+    actors: ['a trail ranger', 'the garden club', 'a river guide', 'the forest path', 'a park volunteer', 'the morning tide'],
+    actions: ['plants', 'clears', 'follows', 'protects', 'counts', 'watches'],
+    items: ['young trees', 'river stones', 'wildflowers', 'tide marks', 'fallen leaves', 'fresh seedlings'],
+    places: ['the pine trail', 'a quiet meadow', 'the canyon edge', 'a coastal path', 'the community garden', 'a rain garden'],
+    details: ['mist lifts from the grass', 'sunlight catches the water', 'roots hold the hillside', 'a breeze cools the path', 'the soil smells fresh', 'clouds gather slowly'],
+  },
+  {
+    topic: 'sports',
+    actors: ['a soccer coach', 'the swim team', 'a tennis player', 'the cycling group', 'a track runner', 'the basketball captain'],
+    actions: ['trains', 'passes', 'times', 'stretches', 'practices', 'celebrates'],
+    items: ['a clean serve', 'lane markers', 'new cleats', 'a water bottle', 'practice cones', 'the final score'],
+    places: ['the gym floor', 'a quiet court', 'the running track', 'a pool deck', 'the practice field', 'a bike lane'],
+    details: ['the whistle sounds once', 'the scoreboard resets', 'a shoe lace comes loose', 'the crowd claps politely', 'the coach checks a clipboard', 'rain delays the drill'],
+  },
+  {
+    topic: 'facts',
+    actors: ['a trivia host', 'the fact checker', 'a curious reader', 'the library desk', 'a quiz writer', 'the science column'],
+    actions: ['notes', 'explains', 'verifies', 'collects', 'shares', 'compares'],
+    items: ['planet sizes', 'calendar quirks', 'ocean depths', 'language roots', 'city names', 'measurement units'],
+    places: ['a reference shelf', 'the quiz board', 'a radio booth', 'the study table', 'a classroom wall', 'the newspaper office'],
+    details: ['the answer sounds unlikely', 'one number changes everything', 'the source gets checked twice', 'a footnote saves time', 'the chart uses tiny print', 'the question starts a debate'],
+  },
+  {
+    topic: 'storytelling',
+    actors: ['a young narrator', 'the bookstore owner', 'a letter writer', 'the campfire circle', 'a comic artist', 'the page turner'],
+    actions: ['begins', 'describes', 'imagines', 'revises', 'draws', 'reveals'],
+    items: ['a secret door', 'lost postcards', 'a silver key', 'the last chapter', 'a brave promise', 'a hidden message'],
+    places: ['a quiet attic', 'the final page', 'a moonlit lane', 'the old theater', 'a painted hallway', 'the village square'],
+    details: ['the ending changes twice', 'a clue hides in plain sight', 'the title finally makes sense', 'the hero chooses kindness', 'the letter arrives late', 'the map points north'],
+  },
+  {
+    topic: 'observations',
+    actors: ['a window watcher', 'the street lamp', 'a careful listener', 'the notebook keeper', 'a balcony sitter', 'the train window'],
+    actions: ['notices', 'counts', 'hears', 'sketches', 'follows', 'remembers'],
+    items: ['passing umbrellas', 'distant bells', 'light on glass', 'quiet footsteps', 'shadows on brick', 'steam from vents'],
+    places: ['a rainy corner', 'the second floor', 'a subway platform', 'the cafe window', 'a brick alley', 'the office lobby'],
+    details: ['a reflection bends sideways', 'the same song plays again', 'colors look brighter after rain', 'a sign swings slowly', 'the room grows still', 'someone laughs downstairs'],
+  },
+  {
+    topic: 'workplace',
+    actors: ['a project manager', 'the design team', 'a new intern', 'the finance lead', 'a warehouse clerk', 'the meeting host'],
+    actions: ['reviews', 'schedules', 'organizes', 'presents', 'updates', 'tracks'],
+    items: ['quarterly goals', 'a shared calendar', 'shipping labels', 'meeting notes', 'budget lines', 'customer feedback'],
+    places: ['the conference room', 'a loading dock', 'the office kitchen', 'a video call', 'the planning board', 'a quiet desk'],
+    details: ['the agenda runs long', 'someone finds a shortcut', 'the chart needs context', 'the deadline moves closer', 'the printer jams again', 'a thank you note helps'],
+  },
+  {
+    topic: 'school',
+    actors: ['a math tutor', 'the debate team', 'a science class', 'the art teacher', 'a library helper', 'the school band'],
+    actions: ['studies', 'practices', 'solves', 'prepares', 'reads', 'builds'],
+    items: ['fraction puzzles', 'painted posters', 'lab notes', 'history cards', 'sheet music', 'a group project'],
+    places: ['the classroom door', 'a study hall', 'the library desk', 'the music room', 'a science fair', 'the playground bench'],
+    details: ['the bell rings early', 'a marker squeaks loudly', 'the answer needs units', 'the class votes twice', 'the poster dries overnight', 'the rubric asks for examples'],
+  },
+  {
+    topic: 'fictional',
+    actors: ['a clockwork courier', 'the lantern keeper', 'a sky bridge guard', 'the velvet inventor', 'a moon station cook', 'the glass city mayor'],
+    actions: ['delivers', 'repairs', 'guards', 'brews', 'draws', 'unlocks'],
+    items: ['a singing compass', 'glowing blueprints', 'midnight soup', 'a velvet engine', 'crystal tickets', 'a folded star map'],
+    places: ['the glass city', 'a floating market', 'the clock tower', 'a silver tunnel', 'the moon kitchen', 'a lantern bridge'],
+    details: ['the compass hums in circles', 'the bridge opens at dawn', 'three bells ring backward', 'the recipe uses starlight', 'the mayor loses a key', 'the tunnel remembers names'],
+  },
 ];
 
-const easyGroups = [
-  'kind friends',
-  'happy neighbors',
-  'busy cooks',
-  'calm students',
-  'brave helpers',
-  'little painters',
-  'new teammates',
-  'quiet readers',
-  'city riders',
-  'morning bakers',
-  'garden helpers',
-  'cozy friends',
-  'bright makers',
-  'careful builders',
-  'gentle dreamers',
-  'street vendors',
-  'paper artists',
-  'window shoppers',
-  'music fans',
-  'moon watchers',
-];
-
-const easyActions = [
-  'walk slowly',
-  'share snacks',
-  'wave hello',
-  'make tea',
-  'plant seeds',
-  'fold maps',
-  'carry bags',
-  'clean desks',
-  'sing softly',
-  'draw stars',
-];
-
-const easyPlaces = [
-  'near the window',
-  'by the road',
-  'under soft stars',
-  'at the park',
-  'beside the cafe',
-  'over the hill',
-  'in the room',
-  'past the bridge',
-  'around the corner',
-  'on the table',
-];
-
-const mediumSeedPrompts = [
-  'Tiny keys click softly while pixel racers zoom past candy clouds.',
-  'Brave beginners type one clean word at a time, then win the race.',
-  'A cheerful keyboard can turn practice into a bright little adventure.',
-  'Fast fingers help, but calm focus makes the finish line easier.',
-  'Every typo is a small signpost pointing toward better rhythm.',
-  'The moonlit arcade glows as friends race across the letter bridge.',
-  'Fresh coffee, cozy lights, and steady typing make a perfect practice run.',
-  'A good race starts with patience and ends with a happy victory dance.',
-  'Neon windows blink gently while brave racers tap through the night.',
-  'Tiny street lamps guide each player toward the glowing finish line.',
-  'A quiet city hums below as every word becomes another step forward.',
-  'Starry parks, soft clouds, and steady hands make the race feel magical.',
-  'The lobby grows lively as new friends join the room, choose cozy avatars, and wait for the countdown together.',
-  'Careful racers keep typing through mistakes, watch the prompt wrap neatly, and finish the round with a calm smile.',
-];
-
-const mediumSubjects = [
-  'The morning bakery',
-  'A quiet library',
-  'The corner market',
-  'A warm kitchen',
-  'The tiny studio',
-  'A busy train station',
-  'The community garden',
-  'A silver elevator',
-  'The neighborhood cafe',
-  'A clean workshop',
-  'The rooftop patio',
-  'A friendly classroom',
-  'The music room',
-  'A small bookstore',
-  'The city bus',
-  'A bright museum',
-  'The picnic table',
-  'A cozy office',
-  'The rainlit sidewalk',
-  'A sunny kitchen',
-];
-
-const mediumActions = [
-  'opened early, and a calm line formed by the door.',
-  'felt peaceful while soft music played in the background.',
-  'shimmered under warm lights, ready for a busy afternoon.',
-  'held a quiet conversation about plans, weather, and dinner.',
-  'kept everyone comfortable as the evening settled in.',
-  'welcomed a new idea, then turned it into a simple plan.',
-  'was full of color, fresh notes, and friendly smiles.',
-  'paused for a moment before the next task began.',
-  'made ordinary errands feel bright, useful, and easy.',
-  'reminded the group to slow down, breathe, and begin again.',
-];
-
-const hardSeedPrompts = [
-  'At 9:42 p.m., Mochee whispered, "Focus first, fireworks later," and typed 117 careful characters.',
-  'TheoDore dodged commas, quotes, and numbers: 14 lanes, 3 shortcuts, and one very stubborn semicolon.',
-  'The cafe sign read "Open 24/7," but the racers still argued about capitalization, rhythm, and accuracy.',
-  'In the neon district, quick-thinking players typed: careful words, crisp pauses, and zero panic.',
-  'A tiny scoreboard flashed "Round 2 begins now," while everyone balanced speed, precision, and calm.',
-  'The studio list included zephyr, queueing, awkward, rhythm, and kaleidoscope; every word needed attention.',
-  'When the clock hit 00:30, the host said, "Ready?" and the whole room answered with flying fingers.',
-  'Bright buses, 8-bit billboards, and midnight rain made the city feel wonderfully impossible.',
-  'Typing "co-op victory" is easy; typing it under pressure, with punctuation, is another challenge.',
-  'The final prompt included 3 numbers, 2 quotes, 1 comma, and a surprisingly sneaky capital Q.',
-  'At exactly 10:18 p.m., the host selected Hard mode, whispered "steady hands," and sent everyone a long challenge.',
-  'The neon scoreboard compared 58 WPM, 96% accuracy, 2 finish times, and one hyper-focused typing streak.',
-];
-
-const hardSubjects = [
-  'At 7:15 a.m., the neighborhood planner',
-  'During the 3rd budget review, Mina',
-  'Inside Studio 204, the design team',
-  'Before the 12-minute timer expired, Jordan',
-  'On the rainlit platform, the station manager',
-  'After reading "Chapter 6," the study group',
-  'While the clock displayed 21:09, the cafe owner',
-  'Near the mural labeled "Begin Again," Priya',
-  'During a careful inventory count, the shop team',
-  'At the community meeting, Alex',
-  'Before sending Version 2.0, the editor',
-  'After comparing 14 color samples, the artist',
-  'While reviewing the route map, the driver',
-  'At Table 8, the workshop coordinator',
-  'During the midnight maintenance window, Sam',
-  'Beside the sign that read "Please Reset," the technician',
-  'After sorting 37 index cards, the librarian',
-  'While the dashboard showed 99.4%, the analyst',
-  'During a quiet planning call, the project lead',
-  'At the end of a long Tuesday, the team captain',
-];
-
-const hardActions = [
-  'said, "Start with clarity," then sorted 18 notes, 4 sketches, and 2 careful reminders.',
-  'balanced quick decisions, patient questions, and a checklist labeled "Version 2.0."',
-  'compared coffee receipts, train times, and weather alerts; the numbers refused to line up.',
-  'wrote, "Small steps still count," across the top of page 47, then underlined it twice.',
-  'noticed that 6 tiny errors, 3 missing labels, and 1 loose cable could delay the plan.',
-  'measured the hallway twice; first at 28 feet, then at 28 feet and 6 inches.',
-  'saved a draft named "final-final-really-final.txt," paused, and laughed at the obvious problem.',
-  'explained the schedule clearly: arrive by 8:05, review at 8:30, and present before 9:00.',
-  'arranged blue folders, yellow sticky notes, and white cards; every stack needed a label.',
-  'tested the backup plan with 5 volunteers, 2 spare chargers, and one calm checklist.',
-  'revised the sentence until its rhythm felt precise, generous, and just a little surprising.',
-  'described the room as "bright, narrow, and full of possible solutions," which sounded exactly right.',
-  'prepared a simple rule: if the first idea fails, try the second one without drama.',
-  'asked, "Which detail matters most?" then waited through a useful, thoughtful silence.',
-  'finished the report at 11:58 p.m.; the title, summary, and footnotes were finally consistent.',
-];
-
-const demonSeedPrompts = [
-  'At 03:17 a.m., the audit console printed "Retry #47"; Mara recalculated 29 columns, 8 ratios, and one elusive variance.',
-  'The instruction read, "Do not simplify this sentence," so the reviewer kept every comma, colon, quote, and semicolon intact.',
-  'After 12 revisions, the policy memo still contained antidisestablishmentarianism, counterintuitive phrasing, and 4 nested clauses.',
-  'Rin whispered, "Precision is mercy," then aligned 64 labels, checked 16 timestamps, and corrected a backwards ampersand.',
-  'The dashboard reported 99.97% uptime; nevertheless, the team examined latency, throughput, redundancy, and failover behavior.',
-  'Before the courier arrived at 18:45, the archivist sorted "urgent," "fragile," and "verify twice" into separate queues.',
-  'A cryptic note said, "Blue folder first; crimson folder second; never skip item 22," which sounded simple until it was not.',
-  'The final paragraph mixed numerals, emblems, acronyms, and careful punctuation; every misplaced mark changed the meaning.',
-];
-
-const demonSubjects = [
-  'At 04:04 a.m., the systems analyst',
-  'During the twelfth review of Ledger-88, Naomi',
-  'Inside the archive labeled "Do Not Rush," the records team',
-  'Before the countdown reached 00:09, the operations lead',
-  'After comparing 31 contradictory invoices, the finance group',
-  'While the sign blinked "Manual Override," Casey',
-  'During a stormy network migration, the platform team',
-  'At Desk 14, beside a stack of annotated maps, Imani',
-  'Before publishing Build 7.2.9, the release manager',
-  'After the transcript displayed "inaudible" six times, the caption editor',
-  'While reviewing Appendix C, the documentation crew',
-  'At exactly 22:22, the incident coordinator',
-  'During the final rehearsal, the stage manager',
-  'Before the museum opened its west gallery, the curator',
-  'After scanning 128 faded labels, the inventory specialist',
-  'While the prototype showed "calibration pending," the engineer',
-  'At the quiet end of a 13-hour planning day, Sofia',
-  'During a tense but respectful debate, the committee chair',
-  'Before the train departed Platform 5, the logistics planner',
-  'After sorting the "miscellaneous" drawer for 46 minutes, the organizer',
-  'While the spreadsheet froze at row 2,048, the analyst',
-  'At the top of the agenda, under "Unusual Constraints," Devon',
-  'Before the printer finished page 99, the office coordinator',
-  'After deciphering three overlapping sticky notes, the project lead',
-];
-
-const demonActions = [
-  'reconciled 7 mismatched totals, quoted "trust the process," and documented every exception; nothing was skipped.',
-  'translated dense feedback into a numbered plan: 3 risks, 5 owners, 8 dates, and one decisive next step.',
-  'cross-referenced aliases, acronyms, timestamps, and footnotes; the smallest discrepancy became the most important clue.',
-  'rewrote a tangled paragraph with parentheses, brackets, quotes, and semicolons while preserving its exact intent.',
-  'noticed that "complete" meant different things to 4 teams, 2 vendors, and a very patient reviewer.',
-  'combined careful skepticism with urgent kindness; the result was faster, clearer, and significantly less chaotic.',
-  'checked every dependency in reverse order, from item 42 back to item 1, because the first mistake was hidden early.',
-  'summarized the decision as "approve, monitor, and revisit," then added three measurable criteria before 09:30.',
-  'balanced precision, speed, context, and humility; the final answer was difficult, but it was finally correct.',
-  'flagged the phrase "probably fine," replaced it with evidence, and attached a timeline accurate to the minute.',
-];
-
-const easyPromptPool = buildPromptPool(
-  easySeedPrompts,
-  buildEasyPrompts(),
-  120,
-);
-const mediumPromptPool = buildPromptPool(
-  mediumSeedPrompts,
-  buildCombinations(mediumSubjects, mediumActions, (subject, action) => `${subject} ${action}`),
-  220,
-);
-const hardPromptPool = buildPromptPool(
-  hardSeedPrompts,
-  buildCombinations(hardSubjects, hardActions, (subject, action) => `${subject} ${action}`),
-  320,
-);
-const demonPromptPool = buildPromptPool(
-  demonSeedPrompts,
-  buildCombinations(demonSubjects, demonActions, (subject, action) => `${subject} ${action}`),
-  240,
+const easyEntries = buildPromptEntries('easy', 36, formatEasyPrompt);
+const mediumEntries = buildPromptEntries('medium', 36, formatMediumPrompt);
+const hardEntries = buildPromptEntries('hard', 36, formatHardPrompt);
+const demonEntries = buildPromptEntries('demon', 36, formatDemonPrompt);
+const promptTopicByText = new Map(
+  [...easyEntries, ...mediumEntries, ...hardEntries, ...demonEntries].map((entry) => [entry.text, entry.topic]),
 );
 
-export function getPromptPool(difficulty: PromptDifficulty) {
+export function getPromptEntries(difficulty: PromptDifficulty) {
   if (difficulty === 'easy') {
-    return easyPromptPool;
-  }
-
-  if (difficulty === 'demon') {
-    return demonPromptPool;
+    return easyEntries;
   }
 
   if (difficulty === 'hard') {
-    return hardPromptPool;
+    return hardEntries;
   }
 
-  return mediumPromptPool;
+  if (difficulty === 'demon') {
+    return demonEntries;
+  }
+
+  return mediumEntries;
+}
+
+export function getPromptPool(difficulty: PromptDifficulty) {
+  return getPromptEntries(difficulty).map((entry) => entry.text);
+}
+
+export function getPromptTopic(prompt: string) {
+  return promptTopicByText.get(prompt);
 }
 
 export function createGeneratedPrompt(difficulty: PromptDifficulty) {
   return pick(getPromptPool(difficulty));
 }
 
-function buildEasyPrompts() {
-  const prompts: string[] = [];
-
-  for (const group of easyGroups) {
-    for (const action of easyActions) {
-      prompts.push(`${group} ${action} ${easyPlaces[prompts.length % easyPlaces.length]}`);
-    }
-  }
-
-  return prompts;
-}
-
-function buildCombinations(
-  firstValues: string[],
-  secondValues: string[],
-  format: (firstValue: string, secondValue: string) => string,
+function buildPromptEntries(
+  difficulty: PromptDifficulty,
+  promptsPerTopic: number,
+  format: (bank: TopicBank, index: number) => string,
 ) {
-  const prompts: string[] = [];
+  const entries = promptTopics.flatMap((bank) =>
+    Array.from({ length: promptsPerTopic }, (_, index) => ({
+      text: format(bank, index),
+      topic: bank.topic,
+    })),
+  );
+  const seen = new Set<string>();
 
-  for (const firstValue of firstValues) {
-    for (const secondValue of secondValues) {
-      prompts.push(format(firstValue, secondValue));
+  return entries.filter((entry) => {
+    if (seen.has(entry.text)) {
+      return false;
     }
-  }
 
-  return prompts;
+    seen.add(entry.text);
+    return true;
+  });
 }
 
-function buildPromptPool(seedPrompts: string[], generatedPrompts: string[], targetCount: number) {
-  return Array.from(new Set([...seedPrompts, ...generatedPrompts])).slice(0, targetCount);
+function formatEasyPrompt(bank: TopicBank, index: number) {
+  const actor = pickAt(bank.actors, index);
+  const action = pickAt(bank.actions, index + Math.floor(index / bank.actors.length));
+  const item = pickAt(bank.items, index * 2 + Math.floor(index / bank.actions.length));
+  const place = pickAt(bank.places, index * 3 + Math.floor(index / bank.items.length));
+  const detail = pickAt(bank.details, index * 5 + Math.floor(index / bank.places.length));
+
+  switch (index % 6) {
+    case 0:
+      return `${actor} ${action} ${item}`;
+    case 1:
+      return `${actor} visits ${place}`;
+    case 2:
+      return `${item} waits near ${place}`;
+    case 3:
+      return `${actor} finds ${detail}`;
+    case 4:
+      return `${place} feels calm today`;
+    default:
+      return `${actor} learns about ${item}`;
+  }
+}
+
+function formatMediumPrompt(bank: TopicBank, index: number) {
+  const actor = pickAt(bank.actors, index);
+  const action = pickAt(bank.actions, index + Math.floor(index / bank.actors.length));
+  const item = pickAt(bank.items, index * 2 + Math.floor(index / bank.actions.length));
+  const place = pickAt(bank.places, index * 3 + Math.floor(index / bank.items.length));
+  const detail = pickAt(bank.details, index * 5 + Math.floor(index / bank.places.length));
+  const nextDetail = pickAt(bank.details, index * 7 + Math.floor(index / bank.details.length) + 1);
+
+  switch (index % 6) {
+    case 0:
+      return `${capitalize(actor)} ${action} ${item} near ${place}, while ${detail}.`;
+    case 1:
+      return `At ${place}, ${actor} ${action} ${item} before ${nextDetail}.`;
+    case 2:
+      return `${capitalize(detail)}, so ${actor} pauses, checks ${item}, and keeps going.`;
+    case 3:
+      return `${capitalize(actor)} studies ${item}; the scene feels ordinary until ${nextDetail}.`;
+    case 4:
+      return `When ${detail}, ${actor} notices ${item} and writes down one useful clue.`;
+    default:
+      return `${capitalize(place)} becomes important after ${actor} ${action} ${item} with surprising care.`;
+  }
+}
+
+function formatHardPrompt(bank: TopicBank, index: number) {
+  const actor = pickAt(bank.actors, index);
+  const action = pickAt(bank.actions, index + Math.floor(index / bank.actors.length));
+  const item = pickAt(bank.items, index * 2 + Math.floor(index / bank.actions.length));
+  const place = pickAt(bank.places, index * 3 + Math.floor(index / bank.items.length));
+  const detail = pickAt(bank.details, index * 5 + Math.floor(index / bank.places.length));
+  const nextDetail = pickAt(bank.details, index * 7 + Math.floor(index / bank.details.length) + 1);
+  const time = pickAt(['07:15', '09:42', '12:08', '15:30', '18:45', '22:10'], index);
+  const number = pickAt(['3', '5', '8', '13', '21', '34'], index);
+
+  switch (index % 6) {
+    case 0:
+      return `At ${time}, ${actor} ${action} ${item} near ${place}; ${detail}, and ${number} notes changed the plan.`;
+    case 1:
+      return `${capitalize(actor)} wrote, "Check ${item} first," then returned to ${place}, where ${nextDetail}.`;
+    case 2:
+      return `The report listed ${item}, ${place}, and ${number} open questions; ${actor} answered them in reverse order.`;
+    case 3:
+      return `Because ${detail}, ${actor} had to compare ${item}, revise the schedule, and explain the result clearly.`;
+    case 4:
+      return `${capitalize(place)} looked quiet, but ${actor} found ${item}, a missing label, and ${number} careful corrections.`;
+    default:
+      return `"${capitalize(nextDetail)}," said ${actor}, before ${action} ${item} and marking page ${number}.`;
+  }
+}
+
+function formatDemonPrompt(bank: TopicBank, index: number) {
+  const actor = pickAt(bank.actors, index);
+  const action = pickAt(bank.actions, index + Math.floor(index / bank.actors.length));
+  const item = pickAt(bank.items, index * 2 + Math.floor(index / bank.actions.length));
+  const place = pickAt(bank.places, index * 3 + Math.floor(index / bank.items.length));
+  const detail = pickAt(bank.details, index * 5 + Math.floor(index / bank.places.length));
+  const nextDetail = pickAt(bank.details, index * 7 + Math.floor(index / bank.details.length) + 1);
+  const time = pickAt(['03:17', '06:06', '10:24', '14:59', '19:03', '23:41'], index);
+  const code = pickAt(['A-17', 'Q4', 'Delta-9', '2048', 'v2.7', '#58'], index);
+  const word = pickAt(['counterintuitive', 'kaleidoscopic', 'meticulous', 'asynchronous', 'cartographic', 'uncharacteristically'], index);
+
+  switch (index % 6) {
+    case 0:
+      return `At ${time}, ${actor} whispered, "Verify ${code}," while ${action} ${item}; ${detail}, ${nextDetail}, and ${word} timing complicated everything.`;
+    case 1:
+      return `${capitalize(actor)} documented ${numberedList(index)} near ${place} (twice), then wrote: "${capitalize(detail)}"; no shortcut survived review.`;
+    case 2:
+      return `The ${word} checklist mentioned ${item}, ${place}, and ${code}; when ${nextDetail}, ${actor} revised 3 clauses, 2 labels, and 1 stubborn footnote.`;
+    case 3:
+      return `"${capitalize(nextDetail)}," ${actor} said; afterward, ${item} was sorted, ${place} was inspected, and ${code} finally matched the ledger.`;
+    case 4:
+      return `Before ${time}, ${actor} had to ${action} ${item}, explain why ${detail}, and preserve every comma, quote, semicolon, and parenthetical aside.`;
+    default:
+      return `In file ${code}, ${actor} found ${item}; the note read "Do not assume," which was wise, because ${nextDetail} at exactly ${time}.`;
+  }
+}
+
+function numberedList(index: number) {
+  const first = pickAt(['4 anomalies', '7 revisions', '12 samples', '19 signals', '23 receipts', '31 markers'], index);
+  const second = pickAt(['2 quiet warnings', '5 disputed dates', '8 narrow margins', '3 altered names', '6 hidden totals', '9 backup notes'], index * 2);
+
+  return `${first}, ${second}, and one final exception`;
+}
+
+function pickAt(values: string[], index: number) {
+  return values[index % values.length];
 }
 
 function pick(values: string[]) {
   return values[Math.floor(Math.random() * values.length)];
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

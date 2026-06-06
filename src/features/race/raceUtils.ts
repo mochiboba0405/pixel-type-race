@@ -1,4 +1,4 @@
-import { DEFAULT_DIFFICULTY, getPromptPool } from '../../data/prompts';
+import { DEFAULT_DIFFICULTY, getPromptEntries, getPromptPool, getPromptTopic } from '../../data/prompts';
 import type { MatchScore, PromptDifficulty, RoundCount, RoundPlayerResult, RoundResult } from './raceTypes';
 
 export const DEFAULT_PROMPT = getPromptPool(DEFAULT_DIFFICULTY)[0];
@@ -6,11 +6,15 @@ export const DEFAULT_ROUND_COUNT: RoundCount = 3;
 export const ROUND_COUNT_OPTIONS = [1, 3, 5, 7, 10] as const;
 
 export function getRandomPrompt(difficulty: PromptDifficulty, excludedPrompts: string[] = []) {
-  const prompts = getPromptPool(difficulty);
-  const unusedPrompts = prompts.filter((prompt) => !excludedPrompts.includes(prompt));
-  const promptPool = unusedPrompts.length > 0 ? unusedPrompts : prompts;
+  const entries = getPromptEntries(difficulty);
+  const excludedPromptSet = new Set(excludedPrompts);
+  const excludedTopicSet = new Set(excludedPrompts.map(getPromptTopic).filter(Boolean));
+  const unusedEntries = entries.filter((entry) => !excludedPromptSet.has(entry.text));
+  const topicDiverseEntries = unusedEntries.filter((entry) => !excludedTopicSet.has(entry.topic));
+  const promptPool =
+    topicDiverseEntries.length > 0 ? topicDiverseEntries : unusedEntries.length > 0 ? unusedEntries : entries;
 
-  return promptPool[Math.floor(Math.random() * promptPool.length)];
+  return promptPool[Math.floor(Math.random() * promptPool.length)].text;
 }
 
 export function createRoundId() {

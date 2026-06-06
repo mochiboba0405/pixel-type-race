@@ -41,6 +41,7 @@ import type {
   RoundResult,
   RoundWinner,
   SceneryChangePayload,
+  ShowRematchSettingsPayload,
   TypingMetrics,
 } from './raceTypes';
 
@@ -798,7 +799,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         const isFinalRound = cleanResult.roundNumber >= cleanResult.totalRounds;
         const nextMatchWinner = isFinalRound ? getMatchWinner(scores) : null;
 
-        setPhase(isFinalRound ? 'match-results' : 'round-results');
+        setPhase(isFinalRound ? 'match-celebration' : 'round-results');
         setMatchWinner(nextMatchWinner);
 
         if (
@@ -845,7 +846,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     }
 
     setMatchId(payload.matchId);
-    setPhase('match-results');
+    setPhase('match-celebration');
   }, [channelName, roomCode]);
 
   const beginRace = useCallback(
@@ -1240,6 +1241,18 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
         });
         applyMatchResultsRef.current(payload as MatchResultsPayload);
       })
+      .on('broadcast', { event: 'show-rematch-settings' }, ({ payload }) => {
+        console.log('[type-race realtime] broadcast received: show-rematch-settings', {
+          roomCode,
+          channelName,
+          payload,
+        });
+        setPhase((currentPhase) =>
+          currentPhase === 'match-celebration' || currentPhase === 'match-results'
+            ? 'match-results'
+            : currentPhase,
+        );
+      })
       .subscribe((status) => {
         if (channelRef.current !== channel || activeChannelKeyRef.current !== channelKey) {
           console.log('[type-race realtime] ignored stale subscription status', {
@@ -1479,6 +1492,16 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     startRound(nextMatchId, 1, totalRoundsRef.current);
   }, [startRound]);
 
+  const continueToPostMatchSettings = useCallback(() => {
+    setPhase('match-results');
+
+    if (channelRef.current) {
+      sendRoomEvent('show-rematch-settings', {
+        matchId: matchIdRef.current,
+      } satisfies ShowRematchSettingsPayload);
+    }
+  }, [sendRoomEvent]);
+
   const updateMyProgress = useCallback(
     (metrics: TypingMetrics) => {
       const currentRoundId = roundIdRef.current;
@@ -1592,6 +1615,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
     startMatch,
     nextRound,
     playAgain,
+    continueToPostMatchSettings,
     changeScenery,
     changeTotalRounds,
     changeDifficulty,

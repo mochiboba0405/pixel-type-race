@@ -1,7 +1,13 @@
 import type { AvatarOption } from '../profile/profileTypes';
 import type { LocalStats } from '../profile/profileTypes';
 
-export type RacePhase = 'lobby' | 'countdown' | 'racing' | 'round-results' | 'match-results';
+export type RacePhase =
+  | 'lobby'
+  | 'countdown'
+  | 'racing'
+  | 'round-results'
+  | 'match-celebration'
+  | 'match-results';
 
 export type RoundCount = 1 | 3 | 5 | 7 | 10;
 
@@ -137,6 +143,10 @@ export type MatchResultsPayload = {
   roundResults: RoundResult[];
   scores: MatchScore[];
   winner: MatchScore | null;
+};
+
+export type ShowRematchSettingsPayload = {
+  matchId: string | null;
 };
 
 export type MatchScore = {

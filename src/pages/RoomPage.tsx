@@ -6,6 +6,7 @@ import { HostControls } from '../components/room/HostControls';
 import { PlayerList } from '../components/room/PlayerList';
 import { RoomChat } from '../components/room/RoomChat';
 import { RoomInvite } from '../components/room/RoomInvite';
+import { MatchCelebrationScreen } from '../components/race/MatchCelebrationScreen';
 import { MatchResultsScreen } from '../components/race/MatchResultsScreen';
 import { MatchScoreboard } from '../components/race/MatchScoreboard';
 import { RaceTrack } from '../components/race/RaceTrack';
@@ -76,7 +77,9 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
   const me = race.players.find((player) => player.playerId === profile.id);
 
   useEffect(() => {
-    if (!race.matchId || race.phase !== 'match-results' || !race.matchWinner || recordedMatchRef.current === race.matchId) {
+    const matchComplete = race.phase === 'match-celebration' || race.phase === 'match-results';
+
+    if (!race.matchId || !matchComplete || !race.matchWinner || recordedMatchRef.current === race.matchId) {
       return;
     }
 
@@ -116,13 +119,19 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
       ? 'Slow down — accuracy matters!'
       : undefined);
   const scenery = getSceneryTheme(race.sceneryId);
-  const canEditScenery = host && (race.phase === 'lobby' || race.phase === 'match-results');
+  const canEditScenery = host && race.phase === 'lobby';
   const roundLabel = `Round ${race.currentRound} of ${race.totalRounds}`;
+  const pageTitle =
+    race.phase === 'match-celebration'
+      ? 'Winner celebration'
+      : race.phase === 'match-results'
+        ? 'Match results'
+        : 'Ready, steady, type';
 
   return (
     <PageShell
       eyebrow={`Room ${roomId}`}
-      title={race.phase === 'match-results' ? 'Match results' : 'Ready, steady, type'}
+      title={pageTitle}
       subtitle="Live progress updates as each player moves across the track."
       sceneryId={race.sceneryId}
     >
@@ -131,7 +140,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
           Home
         </button>
         <div className="room-topbar__pills">
-          {race.phase !== 'lobby' && race.phase !== 'match-results' ? (
+          {race.phase !== 'lobby' && race.phase !== 'match-celebration' && race.phase !== 'match-results' ? (
             <span className="round-pill">{roundLabel}</span>
           ) : null}
           <span className="theme-label">Scenery: {scenery.name}</span>
@@ -156,13 +165,15 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
             <p className="section-label">Scenery</p>
             <h2>{scenery.name}</h2>
             <p className="muted">{scenery.mood}</p>
-            {host ? (
+            {host && race.phase !== 'match-results' ? (
               <SceneryPicker
                 selectedSceneryId={race.sceneryId}
                 disabled={!canEditScenery}
                 onChange={race.changeScenery}
                 onRandomize={() => race.changeScenery(getRandomSceneryId(race.sceneryId))}
               />
+            ) : host ? (
+              <p className="muted">Use New match setup to change scenery for the rematch.</p>
             ) : (
               <p className="muted">The host controls the shared scenery.</p>
             )}
@@ -257,11 +268,25 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
                 currentRound={race.currentRound}
                 totalRounds={race.totalRounds}
                 promptDifficulty={race.promptDifficulty}
+                sceneryId={race.sceneryId}
                 onTotalRoundsChange={race.changeTotalRounds}
                 onDifficultyChange={race.changeDifficulty}
+                onSceneryChange={race.changeScenery}
+                onRandomizeScenery={() => race.changeScenery(getRandomSceneryId(race.sceneryId))}
                 onStartMatch={race.startMatch}
                 onNextRound={race.nextRound}
                 onPlayAgain={race.playAgain}
+              />
+            </div>
+          ) : null}
+
+          {race.phase === 'match-celebration' ? (
+            <div className="finished-race">
+              <MatchCelebrationScreen
+                winner={race.matchWinner}
+                scores={race.matchScores}
+                roundResults={race.roundResults}
+                onContinue={race.continueToPostMatchSettings}
               />
             </div>
           ) : null}

@@ -2,6 +2,7 @@ import { difficultyLabels, difficultyOptions } from '../../data/prompts';
 import type { ConnectionStatus, PromptDifficulty, RacePhase } from '../../features/race/raceTypes';
 import type { RoundCount } from '../../features/race/raceTypes';
 import { ROUND_COUNT_OPTIONS } from '../../features/race/raceUtils';
+import { SceneryPicker } from '../scenery/SceneryPicker';
 
 type HostControlsProps = {
   isHost: boolean;
@@ -11,8 +12,11 @@ type HostControlsProps = {
   currentRound: number;
   totalRounds: RoundCount;
   promptDifficulty: PromptDifficulty;
+  sceneryId?: string;
   onTotalRoundsChange: (rounds: RoundCount) => void;
   onDifficultyChange: (difficulty: PromptDifficulty) => void;
+  onSceneryChange?: (sceneryId: string) => void;
+  onRandomizeScenery?: () => void;
   onStartMatch: () => void;
   onNextRound: () => void;
   onPlayAgain: () => void;
@@ -26,8 +30,11 @@ export function HostControls({
   currentRound,
   totalRounds,
   promptDifficulty,
+  sceneryId,
   onTotalRoundsChange,
   onDifficultyChange,
+  onSceneryChange,
+  onRandomizeScenery,
   onStartMatch,
   onNextRound,
   onPlayAgain,
@@ -152,6 +159,13 @@ export function HostControls({
               ))}
             </select>
           </label>
+          {sceneryId && onSceneryChange && onRandomizeScenery ? (
+            <SceneryPicker
+              selectedSceneryId={sceneryId}
+              onChange={onSceneryChange}
+              onRandomize={onRandomizeScenery}
+            />
+          ) : null}
           <button className="button button--primary" type="button" onClick={onPlayAgain} disabled={!canBroadcast}>
             Start New Match
           </button>
