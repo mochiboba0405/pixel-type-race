@@ -303,6 +303,15 @@
   width: fit-content;
 }
 
+.theme-label--demon {
+  border-color: rgba(248, 113, 113, 0.48);
+  background:
+    linear-gradient(180deg, rgba(127, 29, 29, 0.42), rgba(69, 10, 10, 0.34)),
+    rgba(127, 29, 29, 0.24);
+  color: #fecaca;
+  box-shadow: 0 0 18px rgba(248, 113, 113, 0.18);
+}
+
 .round-pill {
   display: inline-flex;
   min-height: 32px;

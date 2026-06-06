@@ -6,9 +6,17 @@ export const difficultyLabels: Record<PromptDifficulty, string> = {
   easy: 'Easy',
   medium: 'Medium',
   hard: 'Hard',
+  demon: 'Demon Mode',
 };
 
-export const difficultyOptions: PromptDifficulty[] = ['easy', 'medium', 'hard'];
+export const difficultyStatusLabels: Record<PromptDifficulty, string> = {
+  easy: 'Easy',
+  medium: 'Medium',
+  hard: 'Hard',
+  demon: 'Demon',
+};
+
+export const difficultyOptions: PromptDifficulty[] = ['easy', 'medium', 'hard', 'demon'];
 
 const easySeedPrompts = [
   'warm lights glow on the street',
@@ -183,6 +191,57 @@ const hardActions = [
   'finished the report at 11:58 p.m.; the title, summary, and footnotes were finally consistent.',
 ];
 
+const demonSeedPrompts = [
+  'At 03:17 a.m., the audit console printed "Retry #47"; Mara recalculated 29 columns, 8 ratios, and one elusive variance.',
+  'The instruction read, "Do not simplify this sentence," so the reviewer kept every comma, colon, quote, and semicolon intact.',
+  'After 12 revisions, the policy memo still contained antidisestablishmentarianism, counterintuitive phrasing, and 4 nested clauses.',
+  'Rin whispered, "Precision is mercy," then aligned 64 labels, checked 16 timestamps, and corrected a backwards ampersand.',
+  'The dashboard reported 99.97% uptime; nevertheless, the team examined latency, throughput, redundancy, and failover behavior.',
+  'Before the courier arrived at 18:45, the archivist sorted "urgent," "fragile," and "verify twice" into separate queues.',
+  'A cryptic note said, "Blue folder first; crimson folder second; never skip item 22," which sounded simple until it was not.',
+  'The final paragraph mixed numerals, emblems, acronyms, and careful punctuation; every misplaced mark changed the meaning.',
+];
+
+const demonSubjects = [
+  'At 04:04 a.m., the systems analyst',
+  'During the twelfth review of Ledger-88, Naomi',
+  'Inside the archive labeled "Do Not Rush," the records team',
+  'Before the countdown reached 00:09, the operations lead',
+  'After comparing 31 contradictory invoices, the finance group',
+  'While the sign blinked "Manual Override," Casey',
+  'During a stormy network migration, the platform team',
+  'At Desk 14, beside a stack of annotated maps, Imani',
+  'Before publishing Build 7.2.9, the release manager',
+  'After the transcript displayed "inaudible" six times, the caption editor',
+  'While reviewing Appendix C, the documentation crew',
+  'At exactly 22:22, the incident coordinator',
+  'During the final rehearsal, the stage manager',
+  'Before the museum opened its west gallery, the curator',
+  'After scanning 128 faded labels, the inventory specialist',
+  'While the prototype showed "calibration pending," the engineer',
+  'At the quiet end of a 13-hour planning day, Sofia',
+  'During a tense but respectful debate, the committee chair',
+  'Before the train departed Platform 5, the logistics planner',
+  'After sorting the "miscellaneous" drawer for 46 minutes, the organizer',
+  'While the spreadsheet froze at row 2,048, the analyst',
+  'At the top of the agenda, under "Unusual Constraints," Devon',
+  'Before the printer finished page 99, the office coordinator',
+  'After deciphering three overlapping sticky notes, the project lead',
+];
+
+const demonActions = [
+  'reconciled 7 mismatched totals, quoted "trust the process," and documented every exception; nothing was skipped.',
+  'translated dense feedback into a numbered plan: 3 risks, 5 owners, 8 dates, and one decisive next step.',
+  'cross-referenced aliases, acronyms, timestamps, and footnotes; the smallest discrepancy became the most important clue.',
+  'rewrote a tangled paragraph with parentheses, brackets, quotes, and semicolons while preserving its exact intent.',
+  'noticed that "complete" meant different things to 4 teams, 2 vendors, and a very patient reviewer.',
+  'combined careful skepticism with urgent kindness; the result was faster, clearer, and significantly less chaotic.',
+  'checked every dependency in reverse order, from item 42 back to item 1, because the first mistake was hidden early.',
+  'summarized the decision as "approve, monitor, and revisit," then added three measurable criteria before 09:30.',
+  'balanced precision, speed, context, and humility; the final answer was difficult, but it was finally correct.',
+  'flagged the phrase "probably fine," replaced it with evidence, and attached a timeline accurate to the minute.',
+];
+
 const easyPromptPool = buildPromptPool(
   easySeedPrompts,
   buildEasyPrompts(),
@@ -198,10 +257,19 @@ const hardPromptPool = buildPromptPool(
   buildCombinations(hardSubjects, hardActions, (subject, action) => `${subject} ${action}`),
   320,
 );
+const demonPromptPool = buildPromptPool(
+  demonSeedPrompts,
+  buildCombinations(demonSubjects, demonActions, (subject, action) => `${subject} ${action}`),
+  240,
+);
 
 export function getPromptPool(difficulty: PromptDifficulty) {
   if (difficulty === 'easy') {
     return easyPromptPool;
+  }
+
+  if (difficulty === 'demon') {
+    return demonPromptPool;
   }
 
   if (difficulty === 'hard') {

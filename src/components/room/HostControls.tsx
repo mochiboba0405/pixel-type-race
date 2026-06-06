@@ -56,7 +56,7 @@ export function HostControls({
         <section className="panel host-controls">
           <p className="section-label">Match complete</p>
           <h2>Waiting for host</h2>
-          <p className="muted">Waiting for host to play again.</p>
+          <p className="muted">Waiting for host to start new match.</p>
         </section>
       );
     }
@@ -124,10 +124,36 @@ export function HostControls({
 
       {phase === 'match-results' ? (
         <>
-          <h2>Match complete</h2>
-          <p className="muted">Play again keeps everyone in this room.</p>
+          <h2>New match setup</h2>
+          <p className="muted">Change settings, then start a fresh match in this room.</p>
+          <label className="field">
+            <span>Rounds</span>
+            <select
+              value={totalRounds}
+              onChange={(event) => onTotalRoundsChange(Number(event.target.value) as RoundCount)}
+            >
+              {ROUND_COUNT_OPTIONS.map((rounds) => (
+                <option key={rounds} value={rounds}>
+                  {rounds} round{rounds === 1 ? '' : 's'}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Difficulty</span>
+            <select
+              value={promptDifficulty}
+              onChange={(event) => onDifficultyChange(event.target.value as PromptDifficulty)}
+            >
+              {difficultyOptions.map((difficulty) => (
+                <option key={difficulty} value={difficulty}>
+                  {difficultyLabels[difficulty]}
+                </option>
+              ))}
+            </select>
+          </label>
           <button className="button button--primary" type="button" onClick={onPlayAgain} disabled={!canBroadcast}>
-            Play Again
+            Start New Match
           </button>
         </>
       ) : null}

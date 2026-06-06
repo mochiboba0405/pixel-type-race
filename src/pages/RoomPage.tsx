@@ -16,7 +16,7 @@ import { TypingInput } from '../components/race/TypingInput';
 import { TypingPrompt } from '../components/race/TypingPrompt';
 import { SceneryPicker } from '../components/scenery/SceneryPicker';
 import { getRandomSceneryId, getSceneryTheme } from '../data/sceneryThemes';
-import { difficultyLabels } from '../data/prompts';
+import { difficultyStatusLabels } from '../data/prompts';
 import { useLocalProfile } from '../features/profile/useLocalProfile';
 import { isRoomHost, loadRoomScenery } from '../features/room/roomUtils';
 import { useRaceRoom } from '../features/race/useRaceRoom';
@@ -116,7 +116,7 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
       ? 'Slow down — accuracy matters!'
       : undefined);
   const scenery = getSceneryTheme(race.sceneryId);
-  const canEditScenery = host && race.phase === 'lobby';
+  const canEditScenery = host && (race.phase === 'lobby' || race.phase === 'match-results');
   const roundLabel = `Round ${race.currentRound} of ${race.totalRounds}`;
 
   return (
@@ -131,9 +131,13 @@ export function RoomPage({ roomId, navigate }: RoomPageProps) {
           Home
         </button>
         <div className="room-topbar__pills">
-          {race.phase !== 'lobby' ? <span className="round-pill">{roundLabel}</span> : null}
+          {race.phase !== 'lobby' && race.phase !== 'match-results' ? (
+            <span className="round-pill">{roundLabel}</span>
+          ) : null}
           <span className="theme-label">Scenery: {scenery.name}</span>
-          <span className="theme-label">Difficulty: {difficultyLabels[race.promptDifficulty]}</span>
+          <span className={`theme-label ${race.promptDifficulty === 'demon' ? 'theme-label--demon' : ''}`}>
+            Difficulty: {difficultyStatusLabels[race.promptDifficulty]}
+          </span>
           <span className={`connection-pill connection-pill--${race.connectionStatus}`}>
             {race.connectionStatus === 'demo'
               ? 'Demo mode'

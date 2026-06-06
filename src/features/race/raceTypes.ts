@@ -7,7 +7,7 @@ export type RoundCount = 1 | 3 | 5 | 7 | 10;
 
 export type ConnectionStatus = 'demo' | 'connecting' | 'online' | 'offline';
 
-export type PromptDifficulty = 'easy' | 'medium' | 'hard';
+export type PromptDifficulty = 'easy' | 'medium' | 'hard' | 'demon';
 
 export type PlayerRaceState = {
   playerId: string;

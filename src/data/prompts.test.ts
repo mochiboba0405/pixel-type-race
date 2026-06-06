@@ -10,6 +10,7 @@ const minimumCounts = {
   easy: 100,
   medium: 200,
   hard: 300,
+  demon: 200,
 };
 
 for (const difficulty of difficultyOptions) {

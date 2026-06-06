@@ -1190,6 +1190,8 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           payload,
         });
         const config = payload as MatchConfigPayload;
+        totalRoundsRef.current = config.totalRounds;
+        promptDifficultyRef.current = config.difficulty ?? promptDifficultyRef.current;
         setTotalRounds(config.totalRounds);
         setPromptDifficulty(config.difficulty ?? promptDifficultyRef.current);
       })
@@ -1199,7 +1201,9 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           channelName,
           payload,
         });
-        setPromptDifficulty((payload as DifficultyChangePayload).difficulty ?? promptDifficultyRef.current);
+        const nextDifficulty = (payload as DifficultyChangePayload).difficulty ?? promptDifficultyRef.current;
+        promptDifficultyRef.current = nextDifficulty;
+        setPromptDifficulty(nextDifficulty);
       })
       .on('broadcast', { event: 'scenery-change' }, ({ payload }) => {
         console.log('[type-race realtime] scenery event received', {
@@ -1208,6 +1212,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
           payload,
         });
         const nextScenery = (payload as SceneryChangePayload).sceneryId;
+        sceneryIdRef.current = nextScenery;
         setSceneryId(nextScenery);
         saveRoomScenery(roomId, nextScenery);
       })
@@ -1308,6 +1313,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
 
   const changeScenery = useCallback(
     (nextSceneryId: string) => {
+      sceneryIdRef.current = nextSceneryId;
       setSceneryId(nextSceneryId);
       saveRoomScenery(roomId, nextSceneryId);
 
@@ -1320,6 +1326,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
 
   const changeTotalRounds = useCallback(
     (nextTotalRounds: RoundCount) => {
+      totalRoundsRef.current = nextTotalRounds;
       setTotalRounds(nextTotalRounds);
 
       if (channelRef.current) {
@@ -1334,6 +1341,7 @@ export function useRaceRoom({ roomId, profile, isHost, initialSceneryId }: UseRa
 
   const changeDifficulty = useCallback(
     (nextDifficulty: PromptDifficulty) => {
+      promptDifficultyRef.current = nextDifficulty;
       setPromptDifficulty(nextDifficulty);
 
       if (channelRef.current) {
